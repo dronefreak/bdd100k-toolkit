@@ -12,5 +12,5 @@
 # line, e.g. `dataset.data_dir=/path/to/...`.
 name: bdd100k-weather
 data_dir: ???
-num_classes: 6
+num_classes: 7  # 6 weathers + unknown
 eval_split: test

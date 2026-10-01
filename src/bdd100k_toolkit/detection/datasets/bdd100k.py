@@ -63,7 +63,6 @@ from.
 from __future__ import annotations
 
 import json
-import random
 import warnings
 from collections import Counter
 from dataclasses import dataclass, field
@@ -80,6 +79,7 @@ from bdd100k_toolkit.detection.base import (
 )
 from bdd100k_toolkit.detection.registry import register
 from bdd100k_toolkit.utils.checks import format_counts, require_nonempty
+from bdd100k_toolkit.utils.split import seeded_holdout
 
 _CLASSES = [
     "person",
@@ -161,10 +161,12 @@ class BDD100KDetectionAdapter(DatasetAdapter):
         ),
     )
 
-    def prepare_coco(self, raw_dir: Path, output_dir: Path) -> None:
+    def prepare_coco(
+        self, raw_dir: Path, output_dir: Path, *, labels_dir: Path | None = None
+    ) -> None:
         """Convert the official BDD100K 100k-images release into canonical COCO."""
         image_dir = raw_dir / "images" / "100k"
-        label_dir = raw_dir / "labels"
+        label_dir = labels_dir or raw_dir / "labels"
         if not image_dir.is_dir() or not label_dir.is_dir():
             raise FileNotFoundError(
                 f"Expected {raw_dir}/images/100k and {raw_dir}/labels."
@@ -176,10 +178,12 @@ class BDD100KDetectionAdapter(DatasetAdapter):
 
         train_entries = json.loads(train_json.read_text(encoding="utf-8"))
         train_images_by_path = _index_images(image_dir / "train")
-        shuffled = train_entries[:]
-        random.Random(_SPLIT_SEED).shuffle(shuffled)  # noqa: S311  # nosec: B311
-        n_val = max(1, round(len(shuffled) * _VAL_FRACTION))
-        val_names = {e["name"] for e in shuffled[:n_val]}
+        # Same holdout as the classification tasks (sorted names, same seed), so
+        # the valid images are identical across tasks.
+        _, valid_names = seeded_holdout(
+            sorted(e["name"] for e in train_entries), _VAL_FRACTION, _SPLIT_SEED
+        )
+        val_names = set(valid_names)
 
         _write_split(
             [e for e in train_entries if e["name"] not in val_names],

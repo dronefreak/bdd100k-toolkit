@@ -15,7 +15,7 @@ read-only spec; none of its code is reused (see the review's "rules").
 *done when* line; a phase is finished when all its steps are. Don't start a
 phase before its predecessor's exit criteria are met, except where noted.
 
-```
+```text
 P0 foundation (done) -> P1 real-data validation -> P2 shared core
    -> P3 official-semantics evaluation -> P4 data + model debugging
    -> P5 remaining tasks -> P6 more models -> P7 baselines & release
@@ -26,7 +26,7 @@ P0 foundation (done) -> P1 real-data validation -> P2 shared core
 ## Phase 0: Foundation (done)
 
 - [x] Classification (period / weather / scenario) from native
-      `attributes.*`; `ClassificationTrainer`; CLIs; Hydra configs.
+      `attributes.*`; `UltralyticsClassificationTrainer` (now one of two classification backends); CLIs; Hydra configs.
 - [x] CI + pre-commit + ruff/mypy/bandit ported from DetectionBench.
 - [x] Detection: COCO adapter, COCO->YOLO bridge, YOLO trainer, evaluate CLI
       (RF-DETR intentionally not ported).
@@ -71,9 +71,20 @@ download, and fix the silent-failure modes the official review exposed.
    `bdd100k/data/{train,val,test}.txt` counts and DetectionBench's stats.
    *Done when:* a short `docs/data-notes.md` records real counts and any
    surprises (file layout, naming, missing files).
+   *Progress:* classification (period / weather / scenario) done from both the
+   official layout and the Kaggle folders; outputs identical; split sizes
+   checked against the official lists; findings in `docs/data-notes.md`.
+   Detection and semantic segmentation prepare runs still to do (the 10K
+   images and masks are in `bdd100k_seg`; detection needs the same raw
+   download).
 5. **Real smoke-training runs.** One short run per task (yolo11n-cls weather,
    yolo11n detection, Unet/resnet34 seg) on a small real subset.
    *Done when:* each task trains and evaluates end to end on real files.
+   *Progress:* classification done (yolo11n-cls, real data, GPU), including a
+   per-class evaluation report; detection and segmentation still to do.
+   Classification follow-ups: select `best.pt` by macro-F1 instead of
+   Ultralytics' top-1 fitness; try class-balanced sampling or loss weights for
+   the rare classes; confusion-matrix plot.
 6. **Packaging fixes.** *(done 2026-10-01; verified by building a wheel and
    composing every Hydra config; the 5 CLIs themselves were not run because
    torch/ultralytics are not installed in this environment)* Hydra configs resolvable from a non-editable install;
@@ -202,7 +213,10 @@ Goal: swap models without touching data code.
    RetinaNet), keep Ultralytics.
 3. **Segmentation:** more SMP architectures (DeepLabV3+, FPN), plus a
    Hugging Face SegFormer backend.
-4. **Classification:** `timm` backbones next to Ultralytics.
+4. **Classification:** `timm` backbones next to Ultralytics. *(done 2026-10-01:
+   optional `timm` extra, `model.backend`, macro-F1 checkpointing, class
+   balancing, backend-aware evaluation; comparison results in
+   `docs/classification-results.md`.)*
 5. Every backend must be evaluated by the *same* Phase 3 evaluator.
 
 *Exit:* two or more backends per task trainable and evaluated through one

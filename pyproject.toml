@@ -65,6 +65,10 @@ dev = [
 segmentation = [
     "segmentation-models-pytorch>=0.3.0",
 ]
+# Extra classification backend: any of timm's ~1,300 architectures.
+timm = [
+    "timm>=1.0.0",
+]
 
 [project.scripts]
 bdd100k-prepare = "bdd100k_toolkit.cli:prepare"

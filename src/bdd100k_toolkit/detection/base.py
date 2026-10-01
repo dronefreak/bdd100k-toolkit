@@ -57,5 +57,12 @@ class DatasetAdapter(ABC):
     spec: ClassVar[DatasetSpec]
 
     @abstractmethod
-    def prepare_coco(self, raw_dir: Path, output_dir: Path) -> None:
-        """Convert ``raw_dir`` (a raw dataset download) into canonical COCO splits."""
+    def prepare_coco(
+        self, raw_dir: Path, output_dir: Path, *, labels_dir: Path | None = None
+    ) -> None:
+        """
+        Convert ``raw_dir`` (a raw dataset download) into canonical COCO splits.
+
+        ``labels_dir`` overrides ``raw_dir/labels`` when the labels were
+        extracted separately from the images.
+        """

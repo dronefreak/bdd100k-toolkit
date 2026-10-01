@@ -1,13 +1,11 @@
 """
-BDD100K period (time-of-day) classification.
+BDD100K period (time-of-day) classification (unofficial task).
 
-Derives a 3-class time-of-day classification task from BDD100K's native
-per-image ``attributes.timeofday`` field; see
-``bdd100k-weather-classification`` on Kaggle (marquis03) for the third-party
-re-export this mirrors; this adapter derives the same task directly from the
-official label release instead (see ``_bdd100k_common.py`` docstring for why).
-
-``undefined`` timeofday values are dropped (not a decidable class).
+A 4-class time-of-day task (daytime / night / dawn or dusk / unknown) built
+from BDD100K's per-image ``attributes.timeofday`` field. The task follows the
+``bdd100k-period-classification`` Kaggle dataset (marquis03); see
+``_bdd100k_common.py`` for the two accepted input layouts, the ``unknown``
+class (the official ``undefined`` value, kept by default) and the splits.
 """
 
 from __future__ import annotations
@@ -19,11 +17,14 @@ from bdd100k_toolkit.classification.base import (
     ClassificationSpec,
 )
 from bdd100k_toolkit.classification.datasets._bdd100k_common import (
+    UNKNOWN_CLASS,
     prepare_attribute_classification,
 )
 from bdd100k_toolkit.classification.registry import register
 
-_CLASSES = ["daytime", "night", "dawn/dusk"]
+# "dawn/dusk" is BDD100K's raw value; the class (folder) name avoids the slash.
+_CLASSES = ["daytime", "night", "dawn or dusk"]
+_ALIASES = {"dawn/dusk": "dawn or dusk"}
 
 
 @register
@@ -33,11 +34,11 @@ class BDD100KPeriodAdapter(ClassificationAdapter):
     spec = ClassificationSpec(
         key="bdd100k-period",
         display_name="BDD100K Period (Time-of-Day) Classification",
-        classes=_CLASSES,
+        classes=[*_CLASSES, UNKNOWN_CLASS],
         description=(
-            "3-class time-of-day classification (daytime / night / "
-            "dawn-dusk) derived from BDD100K's per-image "
-            "attributes.timeofday field."
+            "4-class time-of-day classification (daytime / night / dawn or dusk / "
+            "unknown) derived from BDD100K's per-image attributes.timeofday "
+            "field. Unofficial task; follows the Kaggle dataset of the same name."
         ),
         homepage="https://www.bdd100k.com/",
         citation=(
@@ -59,6 +60,21 @@ class BDD100KPeriodAdapter(ClassificationAdapter):
         ),
     )
 
-    def prepare_classification(self, raw_dir: Path, output_dir: Path) -> None:
-        """Convert the official BDD100K release into canonical period splits."""
-        prepare_attribute_classification(raw_dir, output_dir, "timeofday", _CLASSES)
+    def prepare_classification(
+        self,
+        raw_dir: Path,
+        output_dir: Path,
+        *,
+        include_unknown: bool = True,
+        labels_dir: Path | None = None,
+    ) -> None:
+        """Convert a BDD100K download into canonical period splits."""
+        prepare_attribute_classification(
+            raw_dir,
+            output_dir,
+            "timeofday",
+            _CLASSES,
+            aliases=_ALIASES,
+            include_unknown=include_unknown,
+            labels_dir=labels_dir,
+        )

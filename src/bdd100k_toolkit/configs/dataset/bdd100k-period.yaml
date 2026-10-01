@@ -13,5 +13,5 @@
 # line, e.g. `dataset.data_dir=/path/to/...`.
 name: bdd100k-period
 data_dir: ???
-num_classes: 3
+num_classes: 4  # 3 periods + unknown
 eval_split: test

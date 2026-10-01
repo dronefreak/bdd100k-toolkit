@@ -26,39 +26,58 @@ granular checklist.
 
 | Task | Status | Classes | Source |
 |---|---|---|---|
-| Time-of-day (period) classification | ✅ | 3 (daytime, night, dawn/dusk) | native `attributes.timeofday` |
-| Weather classification | ✅ | 6 (clear, partly cloudy, overcast, rainy, snowy, foggy) | native `attributes.weather` |
-| Scenario (scene) classification | ✅ | 6 (city street, highway, residential, parking lot, gas stations, tunnel) | native `attributes.scene` |
+| Time-of-day (period) classification, unofficial | ✅ | 4 (daytime, night, dawn or dusk, unknown) | `attributes.timeofday` |
+| Weather classification, unofficial | ✅ | 7 (clear, partly cloudy, overcast, rainy, snowy, foggy, unknown) | `attributes.weather` |
+| Scenario (scene) classification, unofficial | ✅ | 7 (city street, highway, residential, parking lot, gas stations, tunnel, unknown) | `attributes.scene` |
 | Object detection | ✅ | 10 | native `box2d` labels |
 | Semantic segmentation | ✅ | 19 | native `sem_seg` masks |
 | Instance segmentation | planned | n/a | native `ins_seg` masks (RLE) |
 | Panoptic segmentation | planned | n/a | native `pan_seg` masks |
 | Multi-object tracking | planned | n/a | native `box_track` labels |
 
-The three classification tasks above mirror three Kaggle re-exports by user
-`marquis03` (`bdd100k-period-classification`, `bdd100k-weather-classification`,
-`bdd100k-scenario-classification`), but are derived directly from BDD100K's
-own official label release instead of the Kaggle mirrors, since every BDD100K
-detection image is already tagged with `attributes: {weather, timeofday,
-scene}`, so no separate download or third-party class/split assumptions are
-needed.
+The three classification tasks are **unofficial**: BDD100K defines no
+classification benchmark, only per-image `attributes: {weather, timeofday,
+scene}` in its detection label JSON. The tasks follow three Kaggle datasets
+(`bdd100k-period-classification`, `bdd100k-weather-classification`,
+`bdd100k-scenario-classification`, uploaded by `marquis03`, Apache-2.0 on
+Kaggle). Checked image by image against the official 2018 labels, those
+datasets are the same labels and the same images, with `unknown` being the
+official `undefined` value and their `test` folder being the official
+unlabeled test split (ignored here). `unknown` is kept as a class by default
+(`--exclude-unknown` drops it).
+
+Licensing: the Apache-2.0 label on a Kaggle re-upload does not by itself
+change the terms of the underlying BDD100K images and labels (see License
+below). This toolkit never redistributes data.
 
 ## Data layout
 
 ### Classification
 
-Raw input (identical to what BDD100K's own detection release ships):
+Two input layouts are auto-detected under `--raw-dir`:
 
-```
+```text
+# official BDD100K (images and labels are separate archives; use
+# --labels-dir if the labels were extracted somewhere else)
 raw_dir/
   images/100k/{train,val}/**/*.jpg
   labels/bdd100k_labels_images_{train,val}.json
+
+# Kaggle class folders (test/ is unlabeled and ignored)
+raw_dir/
+  {train,val}/<class>/*.jpg
 ```
+
+Both produce identical output (verified on the real data for all three
+tasks). Official `val` becomes `test`; a seeded 15% of `train` becomes
+`valid`. The holdout is chosen over the sorted names of all train images, so
+it is the same for all three tasks, for detection, and with or without
+`--exclude-unknown`.
 
 Canonical output (plain `torchvision.datasets.ImageFolder` layout:
 Ultralytics' classification trainer reads this directly, no glue needed):
 
-```
+```text
 canonical_out/
   train/<class>/*.jpg
   valid/<class>/*.jpg
@@ -76,7 +95,7 @@ the 2018 file is guaranteed to carry the frame `attributes` that the
 classification tasks need. Canonical output is COCO, bridged into Ultralytics YOLO format by a
 generic converter:
 
-```
+```text
 canonical_coco/
   train/{_annotations.coco.json,*.jpg}
   valid/{_annotations.coco.json,*.jpg}
@@ -95,7 +114,7 @@ the separate "10K Images" package (`images/10k/...`), not the 100K set used
 above; per BDD100K's own docs this "is not a subset of the 100K images, even
 though there is a significant overlap", so this needs its own download.
 
-```
+```text
 raw_dir/
   images/10k/{train,val,test}/*.jpg
   labels/sem_seg/masks/{train,val}/*.png   # 1-channel, pixel value = class id, 255 = ignore
@@ -118,7 +137,10 @@ pip install -e ".[dev]"
 
 # --- Classification ---
 
-# 1. Convert a raw BDD100K download into canonical weather-classification splits
+# 1. Convert a download into canonical weather-classification splits.
+#    --raw-dir is either the official download or a Kaggle class-folder tree;
+#    add --labels-dir if the label JSON lives outside <raw-dir>/labels, and
+#    --exclude-unknown to drop the `unknown` class.
 bdd100k-prepare --dataset bdd100k-weather \
     --raw-dir /path/to/bdd100k_raw --output-dir /path/to/canonical_out
 
@@ -126,7 +148,7 @@ bdd100k-prepare --dataset bdd100k-weather \
 bdd100k-train dataset=bdd100k-weather model.name=yolo11n-cls \
     dataset.data_dir=/path/to/canonical_out
 
-# 3. Evaluate
+# 3. Evaluate (top-1/top-5, per-class precision/recall/F1, macro F1, confusion matrix)
 bdd100k-evaluate --dataset bdd100k-weather \
     --checkpoint experiments/bdd100k-weather/yolo11n-cls/weights/best.pt \
     --data-dir /path/to/canonical_out
@@ -166,6 +188,33 @@ bdd100k-evaluate \
     --checkpoint experiments/bdd100k-semantic-seg/Unet-resnet34/model.pt \
     --dataset bdd100k-semantic-seg --data-dir /path/to/canonical_out
 ```
+
+## Classification backends
+
+Two backends train the classification tasks, chosen with `model.backend`:
+
+| Backend | Models | Install |
+|---|---|---|
+| `ultralytics` (default) | `yolo11n-cls`, `yolov8s-cls`, ... | included |
+| `timm` | any of timm's ~1,300 architectures (`convnext_tiny`, `resnet50`, `efficientnet_b0`, ...) with pretrained weights | `pip install "bdd100k-toolkit[timm]"` |
+
+```bash
+bdd100k-train dataset=bdd100k-weather model.backend=timm model.name=convnext_tiny \
+    dataset.data_dir=/path/to/canonical_out
+# timm options go through training.extra (a typo fails loudly):
+#   +training.extra.balance=loss        class-weighted loss (or `sampler`)
+#   +training.extra.balance_power=0.5   weights = count ** -power
+#   +training.extra.label_smoothing=0.1 +training.extra.weight_decay=0.05
+bdd100k-evaluate --dataset bdd100k-weather --checkpoint <run>/weights/best.pt \
+    --data-dir /path/to/canonical_out   # the backend is detected from the file
+```
+
+The timm backend is a small PyTorch loop written for these tasks: it keeps the
+checkpoint with the best **macro F1** on `valid` (not top-1), resizes the whole
+image to a square at train and test time (no centre crop that would cut off
+the sky or the road edge), and uses no colour jitter by default because
+brightness is the time-of-day label. Both backends are evaluated by the same
+report (per-class F1, macro F1, confusion matrix).
 
 ## Failing loudly
 

@@ -8,7 +8,7 @@ library providing standard encoder/decoder architectures (Unet,
 DeepLabV3+, ...) over a plain PyTorch training loop; this wrapper owns
 just the training loop (data loading, optimizer, loss), delegating the
 model architecture itself to SMP, the same "delegate, don't reimplement"
-approach as ``ClassificationTrainer``/``YOLODetectionTrainer``.
+approach as ``UltralyticsClassificationTrainer``/``YOLODetectionTrainer``.
 """
 
 from __future__ import annotations

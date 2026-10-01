@@ -31,7 +31,21 @@ def parse_args() -> argparse.Namespace:
         help="Registered dataset key",
     )
     parser.add_argument(
-        "--raw-dir", required=True, help="Raw BDD100K download (images/100k + labels)"
+        "--raw-dir",
+        required=True,
+        help="Raw BDD100K download (images/100k + labels) or a Kaggle-style "
+        "folder with {train,val}/<class>/*.jpg",
+    )
+    parser.add_argument(
+        "--labels-dir",
+        default=None,
+        help="Folder with bdd100k_labels_images_{train,val}.json when it is not "
+        "<raw-dir>/labels (official layout only)",
+    )
+    parser.add_argument(
+        "--exclude-unknown",
+        action="store_true",
+        help="Drop the 'unknown' (official 'undefined') class; it is kept by default",
     )
     parser.add_argument(
         "--output-dir", required=True, help="Canonical output root to write splits into"
@@ -46,7 +60,12 @@ def main() -> None:
     adapter = get(args.dataset)
     console.print(f"[bold green]Preparing {adapter.spec.display_name}[/bold green]")
     console.print(f"  Classes ({adapter.spec.num_classes}): {adapter.spec.classes}")
-    adapter.prepare_classification(Path(args.raw_dir), Path(args.output_dir))
+    adapter.prepare_classification(
+        Path(args.raw_dir),
+        Path(args.output_dir),
+        include_unknown=not args.exclude_unknown,
+        labels_dir=Path(args.labels_dir) if args.labels_dir else None,
+    )
     console.print("[bold green]Done.[/bold green]")
 
 

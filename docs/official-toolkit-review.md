@@ -50,12 +50,14 @@ rely on exact float round-trips and magic shifts. The toolkit reads the
 
 **Bitmask (`doc/source/format.rst`, `common/bitmask.py`, fixture
 `tests/label/testcases/bitmasks/quasi-video/insseg_bitmask.png`):**
+
 - RGBA PNG. R = category id (1-based, 0 = background). G =
   `(truncated<<3)+(occluded<<2)+(crowd<<1)+ignore`. Instance id =
   `(B<<8)+A`. Fixture check: G values `{0, 4}` (occluded bit) as expected.
 - Crowd/ignore instances are excluded from evaluation.
 
 **Class tables:**
+
 - Detection: 10 classes, official ids 1-based
   (`pedestrian, rider, car, truck, bus, train, motorcycle, bicycle,
   traffic light, traffic sign`). Raw legacy labels use `person`, `motor`,
@@ -78,6 +80,7 @@ rely on exact float round-trips and magic shifts. The toolkit reads the
 only, not from a real `box_track_20` file.
 
 **Release layout (`download.rst`):**
+
 - 100K images: `images/100k/{train,val,test}` (detection, drivable, lane).
 - 10K images: `images/10k/{train,val,test}` (sem/ins/pan seg); *not* a subset
   of the 100K images.
@@ -91,6 +94,7 @@ only, not from a real `box_track_20` file.
   names: the authoritative split sizes.
 
 **Evaluation semantics (what "official numbers" mean):**
+
 - Detection / ins-seg: COCO-style 12 scores; crowd and ignored-class regions
   suppress false positives (>50% overlap).
 - Semantic seg: confusion matrix over native-resolution masks; ignore pixels
