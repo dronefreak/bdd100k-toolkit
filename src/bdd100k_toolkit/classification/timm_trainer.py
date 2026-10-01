@@ -43,6 +43,7 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 
+from bdd100k_toolkit.utils.checks import require_split_dirs
 from bdd100k_toolkit.utils.cls_metrics import (
     DEFAULT_MONITOR,
     check_monitor,
@@ -279,8 +280,10 @@ class TimmClassificationTrainer:
             raise ValueError(
                 f"optimizer must be one of {_OPTIMIZERS}, got {optimizer!r}"
             )
-        _seed_everything(seed)
         data_dir = Path(data_dir)
+        require_split_dirs(data_dir, ("train", "valid"))
+        num_classes = len(_class_names(data_dir / "train"))
+        _seed_everything(seed)
         run_dir = Path(output_dir).resolve() / self.model_name
         (run_dir / "weights").mkdir(parents=True, exist_ok=True)
 
@@ -288,7 +291,7 @@ class TimmClassificationTrainer:
             model = self._timm.create_model(
                 self.model_name,
                 pretrained=pretrained,
-                num_classes=len(_class_names(data_dir / "train")),
+                num_classes=num_classes,
             ).to(self.device)
         except Exception as err:
             raise ValueError(

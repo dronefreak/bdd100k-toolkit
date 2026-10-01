@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping
+from pathlib import Path
 
 
 class EmptySplitError(RuntimeError):
@@ -45,3 +46,22 @@ def format_counts(counts: Mapping[str, int]) -> str:
     if not counts:
         return "none"
     return ", ".join(f"{key}={value}" for key, value in counts.items())
+
+
+def require_split_dirs(data_dir: Path, splits: tuple[str, ...] = ("train",)) -> None:
+    """
+    Raise a clear error when a canonical dataset folder is missing or incomplete.
+
+    Trainers call this before touching the model, so a missing dataset is
+    reported as a missing dataset (with the command that creates it) rather
+    than as some later, unrelated failure.
+    """
+    missing = [name for name in splits if not (data_dir / name).is_dir()]
+    if not missing:
+        return
+    raise FileNotFoundError(
+        f"{data_dir} is not a prepared dataset: missing "
+        f"{', '.join(f'{name}/' for name in missing)}. "
+        "Create it first with: bdd100k-prepare --dataset <key> "
+        f"--raw-dir <download> --output-dir {data_dir}"
+    )

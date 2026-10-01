@@ -28,6 +28,7 @@ from typing import Any
 
 import numpy as np
 
+from bdd100k_toolkit.utils.checks import require_split_dirs
 from bdd100k_toolkit.utils.cls_metrics import (
     DEFAULT_MONITOR,
     check_monitor,
@@ -163,6 +164,7 @@ class UltralyticsClassificationTrainer:
 
         """
         check_monitor(monitor)
+        require_split_dirs(Path(data_dir), ("train",))
         output_dir = Path(output_dir).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
         source = self._pt_name if pretrained else f"{self._model_name}.yaml"

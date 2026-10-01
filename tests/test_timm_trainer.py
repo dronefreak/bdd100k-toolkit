@@ -247,3 +247,19 @@ def test_grad_clip_and_valid_loss_are_recorded(
 ) -> None:
     result = _train(tiny_dataset, tmp_path / "o", epochs=2, grad_clip=1.0)
     assert all(h.val_loss > 0 for h in result["history"])
+
+
+def test_missing_dataset_is_reported_as_a_missing_dataset(tmp_path: Path) -> None:
+    trainer = TimmClassificationTrainer("resnet18", device="cpu")
+    with pytest.raises(FileNotFoundError, match="bdd100k-prepare"):
+        trainer.train(tmp_path / "nope", output_dir=tmp_path / "o", workers=0)
+
+
+def test_dataset_without_valid_split_is_reported(
+    tiny_dataset: Path, tmp_path: Path
+) -> None:
+    import shutil
+
+    shutil.rmtree(tiny_dataset / "valid")
+    with pytest.raises(FileNotFoundError, match="missing valid/"):
+        _train(tiny_dataset, tmp_path / "o")
