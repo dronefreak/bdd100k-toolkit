@@ -156,3 +156,21 @@ def tiny_dataset(tmp_path: Path) -> Path:
                 jitter = tuple(min(255, c + i) for c in color)
                 Image.new("RGB", (64, 36), jitter).save(folder / f"{i}.jpg")
     return tmp_path
+
+
+@pytest.fixture(scope="session")
+def make_tiny_dataset():  # noqa: ANN201
+    """Return a function building a tiny dataset with the given class names/colours."""
+    from PIL import Image
+
+    def build(root: Path, classes: dict[str, tuple[int, int, int]]) -> Path:
+        for split, count in {"train": 12, "valid": 4, "test": 4}.items():
+            for name, color in classes.items():
+                folder = root / split / name
+                folder.mkdir(parents=True)
+                for i in range(count):
+                    jitter = tuple(min(255, c + i) for c in color)
+                    Image.new("RGB", (64, 36), jitter).save(folder / f"{i}.jpg")
+        return root
+
+    return build
