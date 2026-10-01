@@ -35,23 +35,6 @@ def few_threads() -> object:
     torch.set_num_threads(previous)
 
 
-_COLORS = {"red": (220, 20, 20), "green": (20, 200, 20), "blue": (20, 20, 220)}
-
-
-@pytest.fixture
-def tiny_dataset(tmp_path: Path) -> Path:
-    """Three classes of flat colour images in canonical train/valid/test folders."""
-    sizes = {"train": 12, "valid": 4, "test": 4}
-    for split, count in sizes.items():
-        for name, color in _COLORS.items():
-            folder = tmp_path / split / name
-            folder.mkdir(parents=True)
-            for i in range(count):
-                jitter = tuple(min(255, c + i) for c in color)
-                Image.new("RGB", (64, 36), jitter).save(folder / f"{i}.jpg")
-    return tmp_path
-
-
 def _train(data: Path, out: Path, **kwargs: object) -> dict:
     trainer = TimmClassificationTrainer("resnet18", device="cpu")
     params: dict = {
@@ -195,3 +178,72 @@ def test_unknown_timm_model_gives_a_helpful_error_with_the_cause(
         trainer.train(tiny_dataset, output_dir=tmp_path / "o", workers=0)
     assert "pytorch-image-models" in str(info.value)
     assert info.value.__cause__ is not None  # the original error is chained
+
+
+def test_best_checkpoint_follows_the_monitored_metric(
+    tiny_dataset: Path, tmp_path: Path
+) -> None:
+    result = _train(tiny_dataset, tmp_path / "o", epochs=4, lr=3e-3)
+    history = result["history"]
+    assert result["results"]["monitor"] == "macro_f1"
+    assert result["results"]["best_value"] == max(h.monitored for h in history)
+    best_epoch = result["results"]["best_epoch"]
+    assert history[best_epoch - 1].monitored == result["results"]["best_value"]
+    checkpoint = torch.load(result["model_path"], weights_only=True)
+    assert checkpoint["epoch"] == best_epoch
+    assert checkpoint["monitor"] == "macro_f1"
+    assert checkpoint["monitor_value"] == pytest.approx(result["results"]["best_value"])
+
+
+@pytest.mark.parametrize("monitor", ["accuracy", "balanced_accuracy"])
+def test_other_monitors_are_supported(
+    tiny_dataset: Path, tmp_path: Path, monitor: str
+) -> None:
+    result = _train(tiny_dataset, tmp_path / "o", epochs=2, monitor=monitor)
+    history = result["history"]
+    column = {"accuracy": "val_accuracy", "balanced_accuracy": "val_balanced_accuracy"}
+    assert [h.monitored for h in history] == [
+        getattr(h, column[monitor]) for h in history
+    ]
+    rows = list(csv.DictReader((Path(result["output_dir"]) / "results.csv").open()))
+    assert f"monitored_{monitor}" in rows[0]
+
+
+def test_unknown_monitor_is_rejected(tiny_dataset: Path, tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="monitor"):
+        _train(tiny_dataset, tmp_path / "o", monitor="loss")
+
+
+def test_ema_is_on_by_default_and_saved_in_the_checkpoint(
+    tiny_dataset: Path, tmp_path: Path
+) -> None:
+    on = _train(tiny_dataset, tmp_path / "on", epochs=2)
+    off = _train(tiny_dataset, tmp_path / "off", epochs=2, ema=False)
+    assert torch.load(on["model_path"], weights_only=True)["ema"] is True
+    assert torch.load(off["model_path"], weights_only=True)["ema"] is False
+
+
+def test_ema_weights_lag_the_raw_weights(tiny_dataset: Path, tmp_path: Path) -> None:
+    """With EMA the saved weights differ from the plain run with the same seed."""
+    on = _train(tiny_dataset, tmp_path / "on", epochs=2, lr=3e-3, ema_decay=0.99)
+    off = _train(tiny_dataset, tmp_path / "off", epochs=2, lr=3e-3, ema=False)
+    a = torch.load(on["model_path"], weights_only=True)["state_dict"]
+    b = torch.load(off["model_path"], weights_only=True)["state_dict"]
+    differs = [
+        k for k in a if a[k].dtype.is_floating_point and not torch.equal(a[k], b[k])
+    ]
+    assert differs  # EMA actually changed the weights that were saved
+
+
+def test_patience_zero_disables_early_stopping(
+    tiny_dataset: Path, tmp_path: Path
+) -> None:
+    result = _train(tiny_dataset, tmp_path / "o", epochs=3, lr=1e-9, patience=0)
+    assert len(result["history"]) == 3
+
+
+def test_grad_clip_and_valid_loss_are_recorded(
+    tiny_dataset: Path, tmp_path: Path
+) -> None:
+    result = _train(tiny_dataset, tmp_path / "o", epochs=2, grad_clip=1.0)
+    assert all(h.val_loss > 0 for h in result["history"])

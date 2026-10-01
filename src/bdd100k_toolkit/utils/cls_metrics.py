@@ -73,3 +73,23 @@ def classification_metrics(
             for i, name in enumerate(class_names)
         },
     }
+
+
+# Metrics a trainer may monitor to pick the best checkpoint and to early-stop.
+# All are "higher is better".
+MONITORS = ("macro_f1", "balanced_accuracy", "accuracy")
+DEFAULT_MONITOR = "macro_f1"
+
+
+def check_monitor(monitor: str) -> str:
+    """Return ``monitor`` if it is a supported metric name, else raise."""
+    if monitor not in MONITORS:
+        raise ValueError(f"monitor must be one of {MONITORS}, got {monitor!r}")
+    return monitor
+
+
+def monitor_value(confusion: np.ndarray, monitor: str) -> float:
+    """Return the ``monitor`` metric from a ``confusion[true, predicted]`` matrix."""
+    check_monitor(monitor)
+    names = [str(i) for i in range(len(confusion))]
+    return float(classification_metrics(confusion, names)[monitor])

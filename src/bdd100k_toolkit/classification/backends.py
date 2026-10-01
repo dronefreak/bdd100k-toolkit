@@ -23,6 +23,7 @@ class ClassificationBackend(Protocol):
         workers: int,
         patience: int,
         optimizer: str,
+        monitor: str,
         **extra: Any,
     ) -> dict[str, Any]: ...
 

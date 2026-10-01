@@ -50,6 +50,7 @@ def main(cfg: DictConfig) -> None:
         workers=cfg.training.workers,
         patience=cfg.training.patience,
         optimizer=cfg.training.optimizer,
+        monitor=cfg.training.monitor,
         **{str(key): value for key, value in extra.items()},
     )
     console.print(

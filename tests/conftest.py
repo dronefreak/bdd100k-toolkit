@@ -137,3 +137,22 @@ def raw_bdd100k_detection_dir(tmp_path: Path) -> Path:
         json.dumps(val_entries)
     )
     return raw_dir
+
+
+_TINY_COLORS = {"red": (220, 20, 20), "green": (20, 200, 20), "blue": (20, 20, 220)}
+
+
+@pytest.fixture
+def tiny_dataset(tmp_path: Path) -> Path:
+    """Three classes of flat colour images in canonical train/valid/test folders."""
+    from PIL import Image
+
+    sizes = {"train": 12, "valid": 4, "test": 4}
+    for split, count in sizes.items():
+        for name, color in _TINY_COLORS.items():
+            folder = tmp_path / split / name
+            folder.mkdir(parents=True)
+            for i in range(count):
+                jitter = tuple(min(255, c + i) for c in color)
+                Image.new("RGB", (64, 36), jitter).save(folder / f"{i}.jpg")
+    return tmp_path
