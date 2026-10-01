@@ -1,0 +1,16 @@
+# dataset/bdd100k-weather.yaml
+# Hydra `dataset` config group entry for BDD100K weather classification,
+# derived from the official label release's `attributes.weather` field (see
+# src/bdd100k_toolkit/classification/datasets/weather.py and
+# _bdd100k_common.py for the derivation and raw_dir layout).
+#
+# Prepare with:
+#   bdd100k-prepare --dataset bdd100k-weather \
+#       --raw-dir <BDD100K_raw_dir> --output-dir <canonical_out>
+#
+# `data_dir` is required and has no default (Hydra `???`): pass it on the command
+# line, e.g. `dataset.data_dir=/path/to/...`.
+name: bdd100k-weather
+data_dir: ???
+num_classes: 6
+eval_split: test
