@@ -1,0 +1,22 @@
+# Base Hydra config for `bdd100k-train`.
+#
+# Compose with a `dataset=<key>` override (see configs/dataset/) and a
+# `model.name=<ultralytics-cls-checkpoint>` override, e.g.:
+#   bdd100k-train dataset=bdd100k-weather model.name=yolo11n-cls
+
+defaults:
+  - dataset: bdd100k-weather
+  - _self_
+
+model:
+  name: yolo11n-cls
+
+training:
+  epochs: 50
+  batch_size: 64
+  lr: 0.001
+  imgsz: 224
+  workers: 4
+  patience: 20
+  device: auto  # auto = cuda if available, else cpu
+  output_dir: experiments/${dataset.name}/${model.name}

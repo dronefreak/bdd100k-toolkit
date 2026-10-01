@@ -1,0 +1,21 @@
+# Base Hydra config for `bdd100k-train`.
+#
+# Compose with a `dataset=<key>` override (see configs/dataset/), e.g.:
+#   bdd100k-train dataset=bdd100k-semantic-seg
+
+defaults:
+  - dataset: bdd100k-semantic-seg
+  - _self_
+
+model:
+  architecture: Unet
+  encoder_name: resnet34
+
+training:
+  epochs: 50
+  batch_size: 8
+  lr: 0.001
+  imgsz: 512
+  workers: 4
+  device: auto  # auto = cuda if available, else cpu
+  output_dir: experiments/${dataset.name}/${model.architecture}-${model.encoder_name}

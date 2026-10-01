@@ -1,0 +1,16 @@
+# dataset/bdd100k-semantic-seg.yaml
+# Hydra `dataset` config group entry for BDD100K semantic segmentation,
+# produced by
+# src/bdd100k_toolkit/segmentation/semantic/datasets/bdd100k.py.
+#
+# Prepare with:
+#   bdd100k-prepare --dataset bdd100k-semantic-seg \
+#       --raw-dir <BDD100K_10k_raw_dir> --output-dir <canonical_out>
+#
+# `data_dir` is required and has no default (Hydra `???`): pass it on the command
+# line, e.g. `dataset.data_dir=/path/to/...`.
+name: bdd100k-semantic-seg
+data_dir: ???
+num_classes: 19
+ignore_index: 255
+eval_split: test

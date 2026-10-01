@@ -1,0 +1,32 @@
+# Base Hydra config for `bdd100k-train`.
+#
+# Compose with a `dataset=<key>` override (see configs/dataset/) and a
+# `model.name=<ultralytics-detection-checkpoint>` override, e.g.:
+#   bdd100k-train dataset=bdd100k-detection model.name=yolo11n
+
+defaults:
+  - dataset: bdd100k-detection
+  - _self_
+
+model:
+  name: yolo11n
+  num_classes: ${dataset.num_classes}
+
+training:
+  dataset_yaml: ${dataset.dataset_yaml}
+  epochs: 100
+  batch_size: 16
+  lr: 0.001
+  imgsz: 640
+  workers: 4
+  patience: 50
+  device: auto  # auto = cuda if available, else cpu
+  output_dir: experiments/${dataset.name}/${model.name}
+
+evaluation:
+  dataset_yaml: ${dataset.dataset_yaml}
+  num_classes: ${dataset.num_classes}
+  device: ${training.device}
+  output_dir: ${training.output_dir}/evaluation
+  save_predictions: false
+  split: ${dataset.eval_split}

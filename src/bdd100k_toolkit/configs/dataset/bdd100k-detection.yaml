@@ -1,0 +1,16 @@
+# dataset/bdd100k-detection.yaml
+# Hydra `dataset` config group entry for BDD100K object detection, produced
+# by src/bdd100k_toolkit/detection/datasets/bdd100k.py.
+#
+# Prepare with:
+#   bdd100k-prepare --dataset bdd100k-detection \
+#       --raw-dir <BDD100K_raw_dir> --output-dir <canonical_coco_out>
+#   bdd100k-coco-to-yolo \
+#       --input-dir <canonical_coco_out> --output-dir <yolo_out>
+#
+# `dataset_yaml` is required and has no default (Hydra `???`): pass it on the command
+# line, e.g. `dataset.dataset_yaml=/path/to/...`.
+name: bdd100k-detection
+dataset_yaml: ???
+num_classes: 10
+eval_split: test

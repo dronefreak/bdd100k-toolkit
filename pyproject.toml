@@ -1,0 +1,125 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bdd100k-toolkit"
+version = "0.1.0"
+description = "Unofficial, modern, dependency-clean toolkit for BDD100K tasks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "BSD-3-Clause" }
+authors = [{ name = "Saumya Saksena", email = "kumaar324@gmail.com" }]
+keywords = [
+    "computer-vision",
+    "bdd100k",
+    "classification",
+    "object-detection",
+    "semantic-segmentation",
+    "benchmark",
+    "pytorch",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+
+dependencies = [
+    "hydra-core>=1.3.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "pillow>=9.0.0",
+    "PyYAML>=6.0.0",
+    "tqdm>=4.65.0",
+    "ultralytics>=8.0.0",
+    "rich>=14.0.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.14.0",
+    # ruff/mypy/bandit are pinned exactly (not >=) so `pip install -e ".[dev]"`
+    # always resolves to the same versions .pre-commit-config.yaml pins its
+    # hooks to, since otherwise CI's standalone `ruff check`/`mypy`/`bandit` steps
+    # can silently drift from what `pre-commit run --all-files` checked.
+    # Bump both together (and re-verify) when updating.
+    "ruff==0.16.4",
+    "mypy==2.3.1",
+    "types-PyYAML>=6.0.0",
+    "bandit==1.9.4",
+    "pre-commit>=3.3.0",
+]
+segmentation = [
+    "segmentation-models-pytorch>=0.3.0",
+]
+
+[project.scripts]
+bdd100k-prepare = "bdd100k_toolkit.cli:prepare"
+bdd100k-train = "bdd100k_toolkit.cli:train"
+bdd100k-evaluate = "bdd100k_toolkit.cli:evaluate"
+bdd100k-coco-to-yolo = "bdd100k_toolkit.utils.convert_coco_to_yolo:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+bdd100k_toolkit = ["configs/*.yaml", "configs/**/*.yaml"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "S", "D", "PLR"]
+extend-ignore = [
+    "E203",   # Black-compatible slice formatting
+    "D203",   # Google style: no blank line before class (keep D211)
+    "D212",   # Google style: multi-line summary on second line (keep D213)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "D100", "D101", "D102", "D103",  # No docstring requirements in tests
+    "S101",                  # allow assert
+    "PLR2004",               # Magic values in assertions are normal
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+ignore_missing_imports = true
+no_error_summary = true
+pretty = true
+install_types = true
+files = "src,tests"
+
+[tool.bandit]
+targets = ["src"]
+confidence-level = "medium"
+quiet = true
+
+[tool.yamllint]
+extends = "default"
+rules.line-length.max = 120
+rules.document-start = false
