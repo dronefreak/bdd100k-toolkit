@@ -82,6 +82,8 @@ download, and fix the silent-failure modes the official review exposed.
    *Done when:* each task trains and evaluates end to end on real files.
    *Progress:* classification done (yolo11n-cls, real data, GPU), including a
    per-class evaluation report; detection and segmentation still to do.
+   `bdd100k-prepare --max-width 512` (resized train/valid copies) makes
+   Ultralytics training about 2.5-3.5x faster (see `docs/data-notes.md`).
    Classification follow-ups: select `best.pt` by macro-F1 instead of
    Ultralytics' top-1 fitness; try class-balanced sampling or loss weights for
    the rare classes; confusion-matrix plot.

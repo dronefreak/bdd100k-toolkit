@@ -23,3 +23,10 @@ experiments/
 .vscode/
 .idea/
 .DS_Store
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Bash scripts and logs
+*.sh
+*.log

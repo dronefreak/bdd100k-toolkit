@@ -26,7 +26,7 @@ See [`VISION.md`](VISION.md) for the full rationale, architectural
 philosophy, and task status, and [`ROADMAP.md`](ROADMAP.md) for the
 granular checklist.
 
-## Tasks
+## Tasks: Classification
 
 | Task | Classes | Source |
 |---|---|---|
@@ -43,10 +43,6 @@ official 2018 labels, those datasets are the same labels and the same images,
 with `unknown` being the official `undefined` value and their `test` folder
 being the official unlabeled test split (ignored here). `unknown` is kept as a
 class by default (`--exclude-unknown` drops it).
-
-Licensing: the Apache-2.0 label on a Kaggle re-upload does not by itself
-change the terms of the underlying BDD100K images and labels (see License
-below). This toolkit never redistributes data.
 
 The label distribution is heavily imbalanced (for example 13 `foggy` and 7
 `gas stations` images in the test split), so evaluation reports per-class
@@ -106,7 +102,7 @@ bdd100k-train dataset=bdd100k-weather model.name=yolo11n-cls \
 
 # 3. Evaluate (top-1/top-5, per-class precision/recall/F1, macro F1, confusion matrix)
 bdd100k-evaluate --dataset bdd100k-weather \
-    --checkpoint experiments/bdd100k-weather/yolo11n-cls/weights/best.pt \
+    --checkpoint experiments/bdd100k-weather/yolo11n-cls/yolo11n-cls/weights/best.pt \
     --data-dir /path/to/canonical_out
 ```
 
@@ -135,45 +131,17 @@ bdd100k-evaluate --dataset bdd100k-weather --checkpoint <run>/weights/best.pt \
 Both backends are evaluated by the same report (per-class F1, macro F1,
 confusion matrix).
 
-### Training features
-
-| Feature | `ultralytics` | `timm` |
-|---|---|---|
-| EMA of the weights | always on (built in); `best.pt` and `last.pt` hold the EMA weights | on by default (`timm.utils.ModelEmaV3`); `+training.extra.ema=false`, `+training.extra.ema_decay=0.999`; validation and checkpoints use the EMA weights |
-| Early stopping | `training.patience` (0 = off) | `training.patience` (0 = off) |
-| Best-checkpoint saving | `best.pt` by the monitored metric (below), plus `last.pt` | `best.pt` by the monitored metric, plus `last.pt` and a per-epoch `results.csv` |
-| Monitored metric | `training.monitor` | `training.monitor` |
-| Gradient clipping | via `+training.extra.<ultralytics arg>` | `+training.extra.grad_clip=1.0` |
-
-`training.monitor` is `macro_f1` (default), `balanced_accuracy` or `accuracy`,
-computed on `valid` every epoch, and it drives both `best.pt` and early
-stopping. Ultralytics' own classification fitness is `(top-1 + top-5) / 2`,
-which with at most 7 classes is almost always plain top-1, so the Ultralytics
-backend replaces it with the monitored metric. `training.patience` counts
-epochs without improvement of that metric.
-
-The timm backend is a small PyTorch loop written for these tasks. It resizes
-the whole image to a square at train and test time (no centre crop that would
-cut off the sky or the road edge) and uses no colour jitter by default, because
-brightness is the time-of-day label. It also supports class balancing
-(`+training.extra.balance=loss|sampler`), label smoothing, weight decay and a
-warmup plus cosine schedule.
-
-## Failing loudly
-
-Prepare commands never finish "successfully" with an empty `train` or `test`
-split (for example a wrong raw layout): they raise `EmptySplitError`. Anything
-an adapter drops (images with no label file, unexpected attribute values,
-excluded `unknown` images) is counted and printed per split, and classes with
-no training images raise a warning.
-
-Train configs have no machine-local paths: required values such as
-`dataset.data_dir` are Hydra `???` and must be passed on the command line.
-`training.device` defaults to `auto` (CUDA if available, else CPU).
-
 ## License
 
 BSD-3-Clause for this toolkit's code. BDD100K's own data remains governed by
 the [BDD100K License](https://www.bdd100k.com/) (non-commercial
 research/education; registration-gated; no redistribution). This project
 never redistributes BDD100K data itself.
+
+## Roadmap
+
+- [ ] Add scenario/weather/period classification datasets
+- [ ] Add object detection dataset support
+- [ ] Add semantic segmentation dataset support
+- [ ] Add object tracking support
+- [ ] Add ONNX/TensorRT export mechanisms

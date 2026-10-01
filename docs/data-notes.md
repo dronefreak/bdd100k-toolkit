@@ -76,6 +76,39 @@ images are `valid` for every task and for detection, and the holdout does not
 change with `--exclude-unknown`. Resulting sizes: train 59,384, valid 10,479,
 test 10,000.
 
+## Image size and training speed
+
+Ultralytics classification training on the full-size 1280x720 images runs at about
+1,100 img/s (about 60 s per epoch for 59k images) with the GPU mostly idle, and
+the rate swings between 7 and 29 it/s within an epoch: eight loader workers each
+build a whole batch of 128 and finish together, so batches arrive in bursts.
+The progress bar's ETA follows that recent rate, so it reads 10 to 17 s while the
+epoch really takes about 55 s.
+
+Measured on an i5-14600KF (6 fast + 8 slow cores), RTX 4070 SUPER, real
+Ultralytics training on 25% of the weather data, one epoch per variant:
+
+| Variant | img/s | batches stalled over 300 ms |
+|---|---:|---:|
+| full-size, 8 workers (default) | 1,107 | 13 |
+| full-size, 16 workers | 1,103 | 8 |
+| full-size, augmentation off, 8 workers | 917 | 13 |
+| full-size, augmentation off, 16 workers | 1,104 | 10 |
+| 512 px wide, 8 workers | 2,729 | 1 |
+| 512 px wide, 16 workers, no augmentation | 3,386 | 3 |
+| 512 px wide, 16 workers | 3,990 | 1 |
+
+A loader-only test (Ultralytics dataset, no model, no GPU) gave the same numbers,
+so the data pipeline, not the model, is the limit. Decoding a full-size JPEG
+costs only about 3 ms (0.6 ms at 512 px); the remaining per-image cost also
+scales with image size. More workers and lighter augmentation do not help on the
+slow cores. `--max-width 512` does: 6-epoch training took 125 s against 360 s,
+with macro F1 0.629 against 0.635 on the original-resolution test split (one
+seed each, within the noise of a 13-image rarest class).
+
+The timm backend already decodes at half size, and a large model such as
+convnext_tiny is GPU-bound either way, so it gains less.
+
 ## Timing
 
 Preparing one classification task from 80k images takes about 10 s (hard

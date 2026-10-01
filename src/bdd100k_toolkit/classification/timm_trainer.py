@@ -30,8 +30,7 @@ import csv
 import math
 import random
 import time
-from dataclasses import dataclass
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +48,7 @@ from bdd100k_toolkit.utils.cls_metrics import (
     check_monitor,
     classification_metrics,
 )
+from bdd100k_toolkit.utils.training_progress import EpochRecord, TrainingProgress
 
 BACKEND = "timm"
 _BALANCE_MODES = ("none", "loss", "sampler")
@@ -136,15 +136,20 @@ class EvalResult(NamedTuple):
 
 
 @torch.no_grad()
-def confusion_over_loader(
+def confusion_over_loader(  # noqa: PLR0913
     model: nn.Module,
     loader: DataLoader,  # type: ignore[type-arg]
     device: torch.device,
     num_classes: int,
     *,
     use_amp: bool = False,
+    on_batch: Callable[[int], None] | None = None,
 ) -> EvalResult:
-    """Run ``model`` over ``loader`` and collect confusion matrix, top-k and loss."""
+    """
+    Run ``model`` over ``loader`` and collect confusion matrix, top-k and loss.
+
+    ``on_batch(n_images)`` is called after each batch (for progress display).
+    """
     model.eval()
     confusion = np.zeros((num_classes, num_classes), dtype=np.int64)
     top_k = min(5, num_classes)
@@ -167,20 +172,9 @@ def confusion_over_loader(
             ).item()
         )
         total += len(targets)
+        if on_batch is not None:
+            on_batch(len(targets))
     return EvalResult(confusion, hits / max(total, 1), loss_sum / max(total, 1))
-
-
-@dataclass
-class _EpochLog:
-    epoch: int
-    train_loss: float
-    val_loss: float
-    val_accuracy: float
-    val_balanced_accuracy: float
-    val_macro_f1: float
-    monitored: float
-    lr: float
-    seconds: float
 
 
 class TimmClassificationTrainer:
@@ -228,6 +222,7 @@ class TimmClassificationTrainer:
         color_jitter: float = 0.0,
         seed: int = 0,
         use_amp: bool = True,
+        progress: bool = True,
     ) -> dict[str, Any]:
         """
         Train on ``data_dir/{train,valid}`` and keep the best ``monitor`` weights.
@@ -264,6 +259,8 @@ class TimmClassificationTrainer:
             color_jitter: Brightness/contrast jitter (0 keeps time-of-day valid).
             seed: Random seed.
             use_amp: bfloat16 autocast on CUDA.
+            progress: Show live rich progress bars; False prints one plain line
+                per epoch (for log files).
 
         Returns:
             dict with ``results`` (``monitor``, ``best_epoch``, ``best_value``,
@@ -371,70 +368,97 @@ class TimmClassificationTrainer:
             else None
         )
 
-        history: list[_EpochLog] = []
+        tracker = TrainingProgress(epochs, monitor, enabled=progress)
+        tracker.header(
+            {
+                "model": f"timm {self.model_name} "
+                f"({sum(p.numel() for p in model.parameters()) / 1e6:.1f}M params, "
+                f"pretrained={pretrained})",
+                "device": f"{self.device} ({'bf16 autocast' if amp else 'fp32'})",
+                "data": f"{len(train_ds):,} train / {len(valid_ds):,} valid, "
+                f"{len(class_names)} classes, {imgsz}px, batch {batch_size}",
+                "optim": f"{optimizer} lr {peak_lr:g} wd {weight_decay:g}, "
+                f"warmup {warmup_epochs} + cosine, grad clip {grad_clip:g}",
+                "ema": f"on, decay {ema_decay}" if ema else "off",
+                "balance": f"{balance} (power {balance_power})"
+                if balance != "none"
+                else "none",
+                "selection": f"best {monitor} on valid, patience {patience}",
+            }
+        )
+
+        history: list[EpochRecord] = []
         best_value = -1.0
         best_epoch = 0
         best_macro_f1 = 0.0
         step = 0
-        for epoch in range(1, epochs + 1):
-            started = time.time()
-            train_loss, step = self._train_one_epoch(
-                model,
-                train_loader,
-                criterion,
-                opt,
-                scheduler,
-                amp,
-                ema_model,
-                grad_clip,
-                step,
-            )
-            # the EMA weights are what gets validated and saved
-            eval_model = ema_model.module if ema_model is not None else model
-            result = confusion_over_loader(
-                eval_model, valid_loader, self.device, len(class_names), use_amp=amp
-            )
-            metrics = classification_metrics(result.confusion, class_names)
-            value = float(metrics[monitor])
-            log = _EpochLog(
-                epoch,
-                train_loss,
-                result.loss,
-                metrics["accuracy"],
-                metrics["balanced_accuracy"],
-                metrics["macro_f1"],
-                value,
-                opt.param_groups[0]["lr"],
-                time.time() - started,
-            )
-            history.append(log)
-            print(
-                f"epoch {epoch}/{epochs}  train loss {log.train_loss:.4f}  "
-                f"valid loss {log.val_loss:.4f}  acc {log.val_accuracy:.4f}  "
-                f"macro-F1 {log.val_macro_f1:.4f}  ({log.seconds:.0f}s)",
-                flush=True,
-            )
-            checkpoint = _checkpoint(
-                eval_model,
-                self.model_name,
-                class_names,
-                imgsz,
-                mean,
-                std,
-                epoch,
-                monitor,
-                value,
-                ema,
-            )
-            torch.save(checkpoint, run_dir / "weights" / "last.pt")
-            if value > best_value:
-                best_value, best_epoch = value, epoch
-                best_macro_f1 = float(metrics["macro_f1"])
-                torch.save(checkpoint, run_dir / "weights" / "best.pt")
-            _write_history(run_dir / "results.csv", history, monitor)
-            if patience > 0 and epoch - best_epoch >= patience:
-                print(f"early stopping: no {monitor} gain since epoch {best_epoch}")
-                break
+        with tracker:
+            for epoch in range(1, epochs + 1):
+                started = time.time()
+                tracker.start_epoch(epoch, len(train_ds), len(valid_ds))
+                train_loss, step = self._train_one_epoch(
+                    model,
+                    train_loader,
+                    criterion,
+                    opt,
+                    scheduler,
+                    amp,
+                    ema_model,
+                    grad_clip,
+                    step,
+                    tracker.train_batch,
+                )
+                # the EMA weights are what gets validated and saved
+                eval_model = ema_model.module if ema_model is not None else model
+                tracker.start_valid()
+                result = confusion_over_loader(
+                    eval_model,
+                    valid_loader,
+                    self.device,
+                    len(class_names),
+                    use_amp=amp,
+                    on_batch=tracker.valid_batch,
+                )
+                metrics = classification_metrics(result.confusion, class_names)
+                value = float(metrics[monitor])
+                log = EpochRecord(
+                    epoch,
+                    train_loss,
+                    result.loss,
+                    metrics["accuracy"],
+                    metrics["balanced_accuracy"],
+                    metrics["macro_f1"],
+                    value,
+                    opt.param_groups[0]["lr"],
+                    time.time() - started,
+                )
+                history.append(log)
+                tracker.end_epoch(log)
+                checkpoint = _checkpoint(
+                    eval_model,
+                    self.model_name,
+                    class_names,
+                    imgsz,
+                    mean,
+                    std,
+                    epoch,
+                    monitor,
+                    value,
+                    ema,
+                )
+                torch.save(checkpoint, run_dir / "weights" / "last.pt")
+                if value > best_value:
+                    best_value, best_epoch = value, epoch
+                    best_macro_f1 = float(metrics["macro_f1"])
+                    torch.save(checkpoint, run_dir / "weights" / "best.pt")
+                _write_history(run_dir / "results.csv", history, monitor)
+                if patience > 0 and epoch - best_epoch >= patience:
+                    tracker.note(
+                        f"[yellow]early stopping:[/yellow] no {monitor} gain since "
+                        f"epoch {best_epoch}"
+                    )
+                    break
+        tracker.summary(history, best_epoch)
 
         return {
             "results": {
@@ -459,8 +483,13 @@ class TimmClassificationTrainer:
         ema_model: Any,
         grad_clip: float,
         step: int,
+        on_batch: Callable[[int, float, float], None] | None = None,
     ) -> tuple[float, int]:
-        """Train one epoch; return ``(mean loss, updated global step)``."""
+        """
+        Train one epoch; return ``(mean loss, updated global step)``.
+
+        ``on_batch(n_images, loss, lr)`` is called after every optimizer step.
+        """
         model.train()
         total_loss = 0.0
         batches = 0
@@ -478,8 +507,11 @@ class TimmClassificationTrainer:
             step += 1
             if ema_model is not None:
                 ema_model.update(model, step=step)
-            total_loss += float(loss.item())
+            batch_loss = float(loss.item())
+            total_loss += batch_loss
             batches += 1
+            if on_batch is not None:
+                on_batch(len(targets), batch_loss, optimizer.param_groups[0]["lr"])
         return total_loss / max(batches, 1), step
 
 
@@ -543,7 +575,7 @@ def _checkpoint(  # noqa: PLR0913, PLR0917
     }
 
 
-def _write_history(path: Path, history: list[_EpochLog], monitor: str) -> None:
+def _write_history(path: Path, history: list[EpochRecord], monitor: str) -> None:
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(

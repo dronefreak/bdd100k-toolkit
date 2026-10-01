@@ -16,6 +16,7 @@ from pathlib import Path
 
 from bdd100k_toolkit.classification import get, list_datasets
 from bdd100k_toolkit.utils.console import RichConsoleManager
+from bdd100k_toolkit.utils.io import DEFAULT_JPEG_QUALITY, ImageOptions
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,6 +44,33 @@ def parse_args() -> argparse.Namespace:
         "<raw-dir>/labels (official layout only)",
     )
     parser.add_argument(
+        "--max-width",
+        type=int,
+        default=None,
+        metavar="PX",
+        help="Write train/valid images resized to at most PX wide (aspect kept, "
+        "never upscaled) instead of hardlinking the 1280x720 originals. 512 makes "
+        "Ultralytics training about 2.5-3.5x faster, with no accuracy loss seen in a "
+        "6-epoch check. The test split keeps the originals unless --shrink-test.",
+    )
+    parser.add_argument(
+        "--shrink-test",
+        action="store_true",
+        help="With --max-width, shrink the test split too",
+    )
+    parser.add_argument(
+        "--jpeg-quality",
+        type=int,
+        default=DEFAULT_JPEG_QUALITY,
+        help="JPEG quality of resized images (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Processes used for resizing (default: all CPU cores)",
+    )
+    parser.add_argument(
         "--exclude-unknown",
         action="store_true",
         help="Drop the 'unknown' (official 'undefined') class; it is kept by default",
@@ -65,6 +93,12 @@ def main() -> None:
         Path(args.output_dir),
         include_unknown=not args.exclude_unknown,
         labels_dir=Path(args.labels_dir) if args.labels_dir else None,
+        image_options=ImageOptions(
+            max_width=args.max_width,
+            shrink_test=args.shrink_test,
+            jpeg_quality=args.jpeg_quality,
+            workers=args.workers,
+        ),
     )
     console.print("[bold green]Done.[/bold green]")
 

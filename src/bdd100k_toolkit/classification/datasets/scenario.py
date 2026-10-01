@@ -22,6 +22,7 @@ from bdd100k_toolkit.classification.datasets._bdd100k_common import (
     prepare_attribute_classification,
 )
 from bdd100k_toolkit.classification.registry import register
+from bdd100k_toolkit.utils.io import ImageOptions
 
 _CLASSES = [
     "city street",
@@ -74,6 +75,7 @@ class BDD100KScenarioAdapter(ClassificationAdapter):
         *,
         include_unknown: bool = True,
         labels_dir: Path | None = None,
+        image_options: ImageOptions | None = None,
     ) -> None:
         """Convert a BDD100K download into canonical scenario splits."""
         prepare_attribute_classification(
@@ -83,4 +85,5 @@ class BDD100KScenarioAdapter(ClassificationAdapter):
             _CLASSES,
             include_unknown=include_unknown,
             labels_dir=labels_dir,
+            image_options=image_options,
         )

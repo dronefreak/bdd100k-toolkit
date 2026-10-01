@@ -39,7 +39,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from bdd100k_toolkit.classification.base import link_image
+from bdd100k_toolkit.utils.io import ImageOptions, materialize_images
 from bdd100k_toolkit.utils.checks import format_counts, require_nonempty
 from bdd100k_toolkit.utils.split import seeded_holdout
 
@@ -50,6 +50,7 @@ UNKNOWN_CLASS = "unknown"
 RAW_UNDEFINED = "undefined"
 
 Layout = Literal["official", "folders"]
+INFO_FILENAME = "prepare_info.json"
 
 
 @dataclass
@@ -99,6 +100,7 @@ def prepare_attribute_classification(  # noqa: PLR0913
     aliases: dict[str, str] | None = None,
     include_unknown: bool = True,
     labels_dir: Path | None = None,
+    image_options: ImageOptions | None = None,
 ) -> None:
     """
     Convert a BDD100K download into canonical per-``attribute`` splits.
@@ -116,6 +118,9 @@ def prepare_attribute_classification(  # noqa: PLR0913
         include_unknown: Keep the ``unknown`` (official ``undefined``) class.
         labels_dir: Folder holding the label JSON files (official layout
             only); defaults to ``raw_dir/labels``.
+        image_options: Optional shrinking of the written images (see
+            :class:`~bdd100k_toolkit.utils.io.ImageOptions`); by default every
+            image is hardlinked untouched.
 
     """
     allowed = [*classes, UNKNOWN_CLASS] if include_unknown else list(classes)
@@ -132,22 +137,60 @@ def prepare_attribute_classification(  # noqa: PLR0913
         )
     else:
         train, val = _samples_from_folders(raw_dir, classes, include_unknown)
+    options = image_options or ImageOptions()
+    _warn_if_not_empty(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     _, valid_names = seeded_holdout(
         sorted(s.name for s in train), VAL_FRACTION, SPLIT_SEED
     )
     valid_set = set(valid_names)
-    _write_split(
-        [s for s in train if s.name not in valid_set], output_dir / "train", allowed
+    split_counts = {
+        "train": _write_split(
+            [s for s in train if s.name not in valid_set],
+            output_dir / "train",
+            allowed,
+            options,
+        ),
+        "valid": _write_split(
+            [s for s in train if s.name in valid_set],
+            output_dir / "valid",
+            allowed,
+            options,
+            required=False,
+        ),
+        "test": _write_split(val, output_dir / "test", allowed, options),
+    }
+    _write_info(
+        output_dir,
+        {
+            "attribute": attribute,
+            "layout": layout,
+            "include_unknown": include_unknown,
+            "max_width": options.max_width,
+            "shrink_test": options.shrink_test,
+            "jpeg_quality": options.jpeg_quality if options.max_width else None,
+            "images_per_split": {k: sum(v.values()) for k, v in split_counts.items()},
+            "images_per_class": split_counts,
+        },
     )
-    _write_split(
-        [s for s in train if s.name in valid_set],
-        output_dir / "valid",
-        allowed,
-        required=False,
-    )
-    _write_split(val, output_dir / "test", allowed)
+
+
+def _warn_if_not_empty(output_dir: Path) -> None:
+    """Warn that files already in ``output_dir`` are kept, not overwritten."""
+    if output_dir.is_dir() and any(output_dir.iterdir()):
+        warnings.warn(
+            f"{output_dir} is not empty: existing images are kept as they are "
+            "(e.g. an earlier hardlink is not replaced by a resized copy). "
+            "Use a fresh --output-dir for a clean result.",
+            UserWarning,
+            stacklevel=3,
+        )
+
+
+def _write_info(output_dir: Path, info: dict[str, Any]) -> None:
+    """Record how the dataset was prepared, so it can be told apart later."""
+    (output_dir / INFO_FILENAME).write_text(json.dumps(info, indent=2) + "\n")
 
 
 def _label_for(
@@ -233,25 +276,30 @@ def _write_split(
     samples: list[_Sample],
     split_output_dir: Path,
     classes: list[str],
+    options: ImageOptions,
     *,
     required: bool = True,
-) -> None:
-    """Emit one canonical ``<class>/<image>.jpg`` split."""
+) -> dict[str, int]:
+    """Emit one canonical ``<class>/<image>.jpg`` split; return images per class."""
     counts: dict[str, int] = dict.fromkeys(classes, 0)
     dropped: Counter[str] = Counter()
+    jobs: list[tuple[Path, Path]] = []
     for sample in samples:
         if sample.label is None or sample.path is None:
             dropped[sample.reason or "no label"] += 1
             continue
         class_dir = split_output_dir / sample.label
         class_dir.mkdir(parents=True, exist_ok=True)
-        link_image(sample.path, class_dir / sample.name)
+        jobs.append((sample.path, class_dir / sample.name))
         counts[sample.label] += 1
+    shrink = options.shrinks(split_output_dir.name)
+    written = materialize_images(jobs, options, shrink=shrink)
 
     total = sum(counts.values())
+    how = f"; {format_counts(dict(written))}" if shrink else ""
     print(
         f"[{split_output_dir.name}] {total} images ({format_counts(counts)}); "
-        f"dropped: {format_counts(dict(dropped))}"
+        f"dropped: {format_counts(dict(dropped))}{how}"
     )
     problems = {
         reason: count
@@ -279,3 +327,4 @@ def _write_split(
         "{train,val}/<class>/*.jpg)",
         required=required,
     )
+    return counts
