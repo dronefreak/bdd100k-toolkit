@@ -13,5 +13,5 @@
 # line, e.g. `dataset.data_dir=/path/to/...`.
 name: bdd100k-scenario
 data_dir: ???
-num_classes: 6
+num_classes: 7  # 6 scenes + unknown (3 fewer folders with --exclude-unknown)
 eval_split: test

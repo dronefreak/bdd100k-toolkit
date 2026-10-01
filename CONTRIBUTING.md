@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-pip install -e ".[dev,segmentation]"
+pip install -e ".[dev,segmentation,timm]"
 pre-commit install
 ```
 

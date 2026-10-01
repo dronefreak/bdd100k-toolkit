@@ -33,7 +33,7 @@ class ClassificationSpec:
 
     key: str
     display_name: str
-    classes: list[str]
+    classes: list[str]  # canonical class folder names, incl. ``unknown``
     description: str | None = None
     homepage: str | None = None
     citation: str | None = None
@@ -51,5 +51,21 @@ class ClassificationAdapter(ABC):
     spec: ClassVar[ClassificationSpec]
 
     @abstractmethod
-    def prepare_classification(self, raw_dir: Path, output_dir: Path) -> None:
-        """Convert ``raw_dir`` (a raw dataset download) into canonical splits."""
+    def prepare_classification(
+        self,
+        raw_dir: Path,
+        output_dir: Path,
+        *,
+        include_unknown: bool = True,
+        labels_dir: Path | None = None,
+    ) -> None:
+        """
+        Convert ``raw_dir`` (a raw dataset download) into canonical splits.
+
+        Args:
+            raw_dir: Download root (official images + labels, or Kaggle folders).
+            output_dir: Canonical output root.
+            include_unknown: Keep the ``unknown`` class (official ``undefined``).
+            labels_dir: Label JSON folder when it is not ``raw_dir/labels``.
+
+        """

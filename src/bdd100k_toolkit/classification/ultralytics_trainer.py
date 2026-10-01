@@ -15,12 +15,12 @@ from pathlib import Path
 from typing import Any
 
 
-class ClassificationTrainer:
+class UltralyticsClassificationTrainer:
     """Trains image classifiers using the Ultralytics training engine."""
 
     def __init__(self, model_name: str, device: str = "cuda") -> None:
         """
-        Initialize ClassificationTrainer.
+        Initialize UltralyticsClassificationTrainer.
 
         Args:
             model_name: Registered Ultralytics classification checkpoint
@@ -46,11 +46,12 @@ class ClassificationTrainer:
         data_dir: str | Path,
         epochs: int = 100,
         batch_size: int = 64,
-        lr: float = 0.001,
+        lr: float | None = None,
         imgsz: int = 224,
         output_dir: str | Path = "outputs",
         workers: int = 4,
         patience: int = 100,
+        optimizer: str = "auto",
         **extra_kwargs: Any,
     ) -> dict[str, Any]:
         """
@@ -63,13 +64,17 @@ class ClassificationTrainer:
                 by directory name automatically).
             epochs: Number of training epochs.
             batch_size: Batch size.
-            lr: Initial learning rate (``lr0`` in Ultralytics terminology).
+            lr: Initial learning rate (``lr0`` in Ultralytics terminology);
+                None means 0.001.
             imgsz: Input image size (classification defaults to 224, unlike
                 detection's 640; most classification backbones are pretrained
                 at that resolution).
             output_dir: Where to save the final model and logs.
             workers: Number of DataLoader workers.
             patience: Epochs with no improvement before early stopping.
+            optimizer: Ultralytics optimizer name. ``"auto"`` lets Ultralytics
+                choose the optimizer *and* its learning rate, ignoring ``lr``;
+                pass e.g. ``"AdamW"`` for ``lr`` to take effect.
             **extra_kwargs: Passed directly to ``ultralytics.YOLO.train()``.
 
         Returns:
@@ -78,17 +83,24 @@ class ClassificationTrainer:
         """
         output_dir = Path(output_dir).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        model = self._UltralyticsYOLO(self._pt_name)
+        try:
+            model = self._UltralyticsYOLO(self._pt_name)
+        except Exception as err:
+            raise ValueError(
+                f"Failed to initialize model '{self._pt_name}'. Browse the Ultralytics "
+                "classification models at https://docs.ultralytics.com/tasks/classify: "
+                f"{err}"
+            ) from err
         train_kwargs: dict[str, Any] = {
             "data": str(Path(data_dir).resolve()),
             "epochs": epochs,
             "batch": batch_size,
             "imgsz": imgsz,
-            "lr0": lr,
+            "lr0": 0.001 if lr is None else lr,
             "device": self.device,
             "workers": workers,
             "patience": patience,
+            "optimizer": optimizer,
             "project": str(output_dir),
             "name": self._model_name,
             "exist_ok": True,

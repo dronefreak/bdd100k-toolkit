@@ -20,4 +20,4 @@ def test_prepare_classification_writes_canonical_layout(
 
     train_files = list((output_dir / "train").rglob("*.jpg"))
     valid_files = list((output_dir / "valid").rglob("*.jpg"))
-    assert len(train_files) + len(valid_files) == 5
+    assert len(train_files) + len(valid_files) == 6  # incl. `unknown`
