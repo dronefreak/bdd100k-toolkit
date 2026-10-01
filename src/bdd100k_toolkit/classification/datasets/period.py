@@ -21,6 +21,7 @@ from bdd100k_toolkit.classification.datasets._bdd100k_common import (
     prepare_attribute_classification,
 )
 from bdd100k_toolkit.classification.registry import register
+from bdd100k_toolkit.utils.io import ImageOptions
 
 # "dawn/dusk" is BDD100K's raw value; the class (folder) name avoids the slash.
 _CLASSES = ["daytime", "night", "dawn or dusk"]
@@ -67,6 +68,7 @@ class BDD100KPeriodAdapter(ClassificationAdapter):
         *,
         include_unknown: bool = True,
         labels_dir: Path | None = None,
+        image_options: ImageOptions | None = None,
     ) -> None:
         """Convert a BDD100K download into canonical period splits."""
         prepare_attribute_classification(
@@ -77,4 +79,5 @@ class BDD100KPeriodAdapter(ClassificationAdapter):
             aliases=_ALIASES,
             include_unknown=include_unknown,
             labels_dir=labels_dir,
+            image_options=image_options,
         )

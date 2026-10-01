@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
-from bdd100k_toolkit.utils.io import link_image
+from bdd100k_toolkit.utils.io import ImageOptions, link_image
 
 __all__ = [
     "ClassificationAdapter",
@@ -58,6 +58,7 @@ class ClassificationAdapter(ABC):
         *,
         include_unknown: bool = True,
         labels_dir: Path | None = None,
+        image_options: ImageOptions | None = None,
     ) -> None:
         """
         Convert ``raw_dir`` (a raw dataset download) into canonical splits.
@@ -67,5 +68,6 @@ class ClassificationAdapter(ABC):
             output_dir: Canonical output root.
             include_unknown: Keep the ``unknown`` class (official ``undefined``).
             labels_dir: Label JSON folder when it is not ``raw_dir/labels``.
+            image_options: Optionally shrink the written images (default: hardlink).
 
         """

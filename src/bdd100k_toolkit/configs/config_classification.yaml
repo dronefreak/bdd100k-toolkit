@@ -31,5 +31,6 @@ training:
   # Extra Ultralytics train() arguments, e.g. +training.extra.fraction=0.1
   # For timm: ema (true), ema_decay (0.999), grad_clip (0 = off), weight_decay,
   # label_smoothing, balance (none|loss|sampler), balance_power, warmup_epochs,
-  # pretrained, scale_min, hflip, color_jitter, seed.
+  # pretrained, scale_min, hflip, color_jitter, seed, progress (false = plain
+  # per-epoch lines for log files; Ultralytics draws its own bars).
   extra: {}

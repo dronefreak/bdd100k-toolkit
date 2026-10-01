@@ -263,3 +263,23 @@ def test_dataset_without_valid_split_is_reported(
     shutil.rmtree(tiny_dataset / "valid")
     with pytest.raises(FileNotFoundError, match="missing valid/"):
         _train(tiny_dataset, tmp_path / "o")
+
+
+def test_progress_can_be_disabled_for_plain_logs(
+    tiny_dataset: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _train(tiny_dataset, tmp_path / "o", epochs=2, progress=False)
+    out = capsys.readouterr().out
+    assert "epoch 1/2" in out and "epoch 2/2" in out
+    assert "\x1b" not in out  # no live bars or colours in the captured log
+
+
+def test_progress_display_trains_to_the_same_result(
+    tiny_dataset: Path, tmp_path: Path
+) -> None:
+    """The display is a pure observer: same seed, same metrics."""
+    shown = _train(tiny_dataset, tmp_path / "a", epochs=2, lr=3e-3, progress=True)
+    quiet = _train(tiny_dataset, tmp_path / "b", epochs=2, lr=3e-3, progress=False)
+    assert [h.val_macro_f1 for h in shown["history"]] == [
+        h.val_macro_f1 for h in quiet["history"]
+    ]
