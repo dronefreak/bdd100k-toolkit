@@ -29,6 +29,12 @@ class _FakeYOLO:
 _SENTINEL_TRAINER = type("SentinelTrainer", (), {})
 
 
+def _data(tmp_path: Path) -> Path:
+    """Return a minimal prepared-dataset folder (the trainer only checks ``train/``)."""
+    (tmp_path / "data" / "train").mkdir(parents=True, exist_ok=True)
+    return tmp_path / "data"
+
+
 @pytest.fixture(autouse=True)
 def fake_ultralytics(monkeypatch: pytest.MonkeyPatch) -> None:
     _FakeYOLO.calls = []
@@ -45,7 +51,7 @@ def fake_ultralytics(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_train_passes_core_arguments_and_extra_kwargs(tmp_path: Path) -> None:
     trainer = UltralyticsClassificationTrainer("yolo11n-cls", device="cpu")
     result = trainer.train(
-        data_dir=tmp_path,
+        data_dir=_data(tmp_path),
         epochs=3,
         batch_size=8,
         optimizer="AdamW",
@@ -53,7 +59,7 @@ def test_train_passes_core_arguments_and_extra_kwargs(tmp_path: Path) -> None:
         fraction=0.1,
     )
     kwargs = _FakeYOLO.calls[0]
-    assert kwargs["data"] == str(tmp_path.resolve())
+    assert kwargs["data"] == str(_data(tmp_path).resolve())
     assert kwargs["epochs"] == 3
     assert kwargs["batch"] == 8
     assert kwargs["optimizer"] == "AdamW"
@@ -69,7 +75,7 @@ def test_optimizer_defaults_to_auto(tmp_path: Path) -> None:
     )
 
     UltralyticsClassificationTrainer("yolo11n-cls").train(
-        tmp_path, output_dir=tmp_path / "o"
+        _data(tmp_path), output_dir=tmp_path / "o"
     )
     assert _FakeYOLO.calls[0]["optimizer"] == "auto"
 
@@ -77,14 +83,16 @@ def test_optimizer_defaults_to_auto(tmp_path: Path) -> None:
 def test_unknown_model_gives_a_helpful_error_with_the_cause(tmp_path: Path) -> None:
     trainer = UltralyticsClassificationTrainer("bad-model", device="cpu")
     with pytest.raises(ValueError, match="bad-model.pt") as info:
-        trainer.train(tmp_path, output_dir=tmp_path / "o")
+        trainer.train(_data(tmp_path), output_dir=tmp_path / "o")
     assert "docs.ultralytics.com" in str(info.value)
     assert isinstance(info.value.__cause__, FileNotFoundError)  # original kept
 
 
 def test_monitor_is_wired_into_a_custom_trainer(tmp_path: Path) -> None:
     trainer = UltralyticsClassificationTrainer("yolo11n-cls", device="cpu")
-    result = trainer.train(tmp_path, output_dir=tmp_path / "o", monitor="accuracy")
+    result = trainer.train(
+        _data(tmp_path), output_dir=tmp_path / "o", monitor="accuracy"
+    )
     assert _FakeYOLO.calls[0]["trainer"] is _SENTINEL_TRAINER
     assert result["monitor"] == "accuracy"
 
@@ -92,7 +100,7 @@ def test_monitor_is_wired_into_a_custom_trainer(tmp_path: Path) -> None:
 def test_unknown_monitor_is_rejected(tmp_path: Path) -> None:
     trainer = UltralyticsClassificationTrainer("yolo11n-cls", device="cpu")
     with pytest.raises(ValueError, match="monitor"):
-        trainer.train(tmp_path, output_dir=tmp_path / "o", monitor="top5")
+        trainer.train(_data(tmp_path), output_dir=tmp_path / "o", monitor="top5")
 
 
 def test_pretrained_false_builds_from_yaml(tmp_path: Path) -> None:
@@ -106,8 +114,8 @@ def test_pretrained_false_builds_from_yaml(tmp_path: Path) -> None:
 
     _FakeYOLO.__init__ = spy  # type: ignore[method-assign]
     try:
-        trainer.train(tmp_path, output_dir=tmp_path / "o", pretrained=False)
-        trainer.train(tmp_path, output_dir=tmp_path / "o", pretrained=True)
+        trainer.train(_data(tmp_path), output_dir=tmp_path / "o", pretrained=False)
+        trainer.train(_data(tmp_path), output_dir=tmp_path / "o", pretrained=True)
     finally:
         _FakeYOLO.__init__ = original  # type: ignore[method-assign]
     assert seen == ["yolo11n-cls.yaml", "yolo11n-cls.pt"]
@@ -126,3 +134,10 @@ def test_monitor_from_predictions_uses_the_top1_column() -> None:
     assert monitor_from_predictions(targets, predictions, 2, "accuracy") == 0.75
     f1 = monitor_from_predictions(targets, predictions, 2, "macro_f1")
     assert f1 == pytest.approx((2 / 3 + 0.8) / 2)
+
+
+def test_missing_dataset_is_reported_as_a_missing_dataset(tmp_path: Path) -> None:
+    trainer = UltralyticsClassificationTrainer("yolo11n-cls", device="cpu")
+    with pytest.raises(FileNotFoundError, match="bdd100k-prepare"):
+        trainer.train(tmp_path / "nope", output_dir=tmp_path / "o")
+    assert _FakeYOLO.calls == []  # failed before touching the model
