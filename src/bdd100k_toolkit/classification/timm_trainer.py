@@ -7,8 +7,10 @@ architectures with pretrained weights behind one call,
 plain PyTorch loop around it, deliberately small, built for the BDD100K
 attribute tasks rather than for generality:
 
-- model selection by **macro F1** on ``valid`` (not top-1), since the tasks are
-  heavily imbalanced;
+- model selection and early stopping by a monitored metric on ``valid``, **macro
+  F1** by default (not top-1), since the tasks are heavily imbalanced;
+- an exponential moving average of the weights (``timm.utils.ModelEmaV3``, on by
+  default); validation, ``best.pt`` and ``last.pt`` use the EMA weights;
 - optional class balancing (``balance="loss"`` weights or ``"sampler"``);
 - augmentations that keep the labels valid: no colour jitter by default
   (brightness *is* the time-of-day label), crops that keep the 16:9 aspect, and
@@ -29,6 +31,7 @@ import math
 import random
 import time
 from dataclasses import dataclass
+from typing import NamedTuple
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +43,11 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 
-from bdd100k_toolkit.utils.cls_metrics import classification_metrics
+from bdd100k_toolkit.utils.cls_metrics import (
+    DEFAULT_MONITOR,
+    check_monitor,
+    classification_metrics,
+)
 
 BACKEND = "timm"
 _BALANCE_MODES = ("none", "loss", "sampler")
@@ -119,6 +126,14 @@ def balance_weights(counts: np.ndarray, power: float) -> np.ndarray:
     return weights / weights.mean()
 
 
+class EvalResult(NamedTuple):
+    """Outcome of one pass over a loader."""
+
+    confusion: np.ndarray  # [true, predicted]
+    top5: float  # top-k accuracy with k = min(5, num_classes)
+    loss: float  # mean (unweighted) cross-entropy
+
+
 @torch.no_grad()
 def confusion_over_loader(
     model: nn.Module,
@@ -127,36 +142,42 @@ def confusion_over_loader(
     num_classes: int,
     *,
     use_amp: bool = False,
-) -> tuple[np.ndarray, float]:
-    """
-    Run ``model`` over ``loader``; return ``(confusion[true, pred], top5)``.
-
-    ``top5`` is top-k accuracy with ``k = min(5, num_classes)``.
-    """
+) -> EvalResult:
+    """Run ``model`` over ``loader`` and collect confusion matrix, top-k and loss."""
     model.eval()
     confusion = np.zeros((num_classes, num_classes), dtype=np.int64)
     top_k = min(5, num_classes)
     hits = 0
     total = 0
+    loss_sum = 0.0
     for images, targets in loader:
         images = images.to(device, non_blocking=True)
         with torch.autocast(device.type, dtype=torch.bfloat16, enabled=use_amp):
             logits = model(images)
+        logits = logits.float()
         predicted = logits.argmax(dim=1).cpu().numpy()
         targets_np = targets.numpy()
         np.add.at(confusion, (targets_np, predicted), 1)
         top = logits.topk(top_k, dim=1).indices.cpu()
         hits += int((top == targets.unsqueeze(1)).any(dim=1).sum())
+        loss_sum += float(
+            nn.functional.cross_entropy(
+                logits, targets.to(device), reduction="sum"
+            ).item()
+        )
         total += len(targets)
-    return confusion, hits / max(total, 1)
+    return EvalResult(confusion, hits / max(total, 1), loss_sum / max(total, 1))
 
 
 @dataclass
 class _EpochLog:
     epoch: int
     train_loss: float
+    val_loss: float
     val_accuracy: float
+    val_balanced_accuracy: float
     val_macro_f1: float
+    monitored: float
     lr: float
     seconds: float
 
@@ -190,7 +211,11 @@ class TimmClassificationTrainer:
         workers: int = 4,
         patience: int = 100,
         optimizer: str = "auto",
+        monitor: str = DEFAULT_MONITOR,
         *,
+        ema: bool = True,
+        ema_decay: float = 0.999,
+        grad_clip: float = 0.0,
         weight_decay: float = 0.05,
         label_smoothing: float = 0.0,
         balance: str = "none",
@@ -204,7 +229,7 @@ class TimmClassificationTrainer:
         use_amp: bool = True,
     ) -> dict[str, Any]:
         """
-        Train on ``data_dir/{train,valid}`` and keep the best macro-F1 weights.
+        Train on ``data_dir/{train,valid}`` and keep the best ``monitor`` weights.
 
         Args:
             data_dir: Canonical root with ``train/`` and ``valid/``.
@@ -214,8 +239,17 @@ class TimmClassificationTrainer:
             imgsz: Square input size.
             output_dir: Run folder is ``output_dir/<model_name>/``.
             workers: DataLoader workers.
-            patience: Epochs without macro-F1 improvement before stopping.
+            patience: Epochs without improvement of ``monitor`` before stopping
+                (0 disables early stopping).
             optimizer: ``"auto"``/``"adamw"`` or ``"sgd"``.
+            monitor: Metric on ``valid`` that selects ``best.pt`` and drives
+                early stopping: ``"macro_f1"`` (default),
+                ``"balanced_accuracy"`` or ``"accuracy"``.
+            ema: Keep an exponential moving average of the weights and use it
+                for validation and for the saved checkpoints.
+            ema_decay: Target EMA decay. It ramps up from 0 (``use_warmup``), so
+                short runs are not dominated by the random-looking early weights.
+            grad_clip: Clip the gradient norm to this value (0 disables).
             weight_decay: Optimizer weight decay.
             label_smoothing: Cross-entropy label smoothing.
             balance: ``"none"``, ``"loss"`` (class-weighted loss) or
@@ -231,10 +265,12 @@ class TimmClassificationTrainer:
             use_amp: bfloat16 autocast on CUDA.
 
         Returns:
-            dict with ``results`` (best metrics), ``model_path`` (``best.pt``),
+            dict with ``results`` (``monitor``, ``best_epoch``, ``best_value``,
+            ``best_valid_macro_f1``), ``model_path`` (``best.pt``),
             ``output_dir`` and ``history``.
 
         """
+        check_monitor(monitor)
         if balance not in _BALANCE_MODES:
             raise ValueError(
                 f"balance must be one of {_BALANCE_MODES}, got {balance!r}"
@@ -326,48 +362,84 @@ class TimmClassificationTrainer:
             _warmup_cosine(warmup_epochs * steps_per_epoch, epochs * steps_per_epoch),
         )
         amp = use_amp and self.device.type == "cuda"
+        ema_model = (
+            self._timm.utils.ModelEmaV3(model, decay=ema_decay, use_warmup=True)
+            if ema
+            else None
+        )
 
         history: list[_EpochLog] = []
-        best_f1 = -1.0
+        best_value = -1.0
         best_epoch = 0
+        best_macro_f1 = 0.0
+        step = 0
         for epoch in range(1, epochs + 1):
             started = time.time()
-            train_loss = self._train_one_epoch(
-                model, train_loader, criterion, opt, scheduler, amp
+            train_loss, step = self._train_one_epoch(
+                model,
+                train_loader,
+                criterion,
+                opt,
+                scheduler,
+                amp,
+                ema_model,
+                grad_clip,
+                step,
             )
-            confusion, _ = confusion_over_loader(
-                model, valid_loader, self.device, len(class_names), use_amp=amp
+            # the EMA weights are what gets validated and saved
+            eval_model = ema_model.module if ema_model is not None else model
+            result = confusion_over_loader(
+                eval_model, valid_loader, self.device, len(class_names), use_amp=amp
             )
-            metrics = classification_metrics(confusion, class_names)
+            metrics = classification_metrics(result.confusion, class_names)
+            value = float(metrics[monitor])
             log = _EpochLog(
                 epoch,
                 train_loss,
+                result.loss,
                 metrics["accuracy"],
+                metrics["balanced_accuracy"],
                 metrics["macro_f1"],
+                value,
                 opt.param_groups[0]["lr"],
                 time.time() - started,
             )
             history.append(log)
             print(
-                f"epoch {epoch}/{epochs}  loss {log.train_loss:.4f}  "
-                f"valid acc {log.val_accuracy:.4f}  macro-F1 {log.val_macro_f1:.4f}  "
-                f"({log.seconds:.0f}s)",
+                f"epoch {epoch}/{epochs}  train loss {log.train_loss:.4f}  "
+                f"valid loss {log.val_loss:.4f}  acc {log.val_accuracy:.4f}  "
+                f"macro-F1 {log.val_macro_f1:.4f}  ({log.seconds:.0f}s)",
                 flush=True,
             )
             checkpoint = _checkpoint(
-                model, self.model_name, class_names, imgsz, mean, std, epoch, metrics
+                eval_model,
+                self.model_name,
+                class_names,
+                imgsz,
+                mean,
+                std,
+                epoch,
+                monitor,
+                value,
+                ema,
             )
             torch.save(checkpoint, run_dir / "weights" / "last.pt")
-            if log.val_macro_f1 > best_f1:
-                best_f1, best_epoch = log.val_macro_f1, epoch
+            if value > best_value:
+                best_value, best_epoch = value, epoch
+                best_macro_f1 = float(metrics["macro_f1"])
                 torch.save(checkpoint, run_dir / "weights" / "best.pt")
-            _write_history(run_dir / "results.csv", history)
-            if epoch - best_epoch >= patience:
-                print(f"early stopping: no macro-F1 gain since epoch {best_epoch}")
+            _write_history(run_dir / "results.csv", history, monitor)
+            if patience > 0 and epoch - best_epoch >= patience:
+                print(f"early stopping: no {monitor} gain since epoch {best_epoch}")
                 break
 
         return {
-            "results": {"best_epoch": best_epoch, "best_valid_macro_f1": best_f1},
+            "results": {
+                "monitor": monitor,
+                "best_epoch": best_epoch,
+                "best_value": best_value,
+                "best_valid_macro_f1": best_macro_f1,
+            },
             "model_path": str(run_dir / "weights" / "best.pt"),
             "output_dir": str(run_dir),
             "history": history,
@@ -381,7 +453,11 @@ class TimmClassificationTrainer:
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler.LRScheduler,
         amp: bool,
-    ) -> float:
+        ema_model: Any,
+        grad_clip: float,
+        step: int,
+    ) -> tuple[float, int]:
+        """Train one epoch; return ``(mean loss, updated global step)``."""
         model.train()
         total_loss = 0.0
         batches = 0
@@ -392,11 +468,16 @@ class TimmClassificationTrainer:
             with torch.autocast(self.device.type, dtype=torch.bfloat16, enabled=amp):
                 loss = criterion(model(images), targets)
             loss.backward()
+            if grad_clip > 0:
+                nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
             scheduler.step()
+            step += 1
+            if ema_model is not None:
+                ema_model.update(model, step=step)
             total_loss += float(loss.item())
             batches += 1
-        return total_loss / max(batches, 1)
+        return total_loss / max(batches, 1), step
 
 
 def _seed_everything(seed: int) -> None:
@@ -440,7 +521,9 @@ def _checkpoint(  # noqa: PLR0913, PLR0917
     mean: tuple[float, ...],
     std: tuple[float, ...],
     epoch: int,
-    metrics: dict[str, Any],
+    monitor: str,
+    value: float,
+    ema: bool,
 ) -> dict[str, Any]:
     return {
         "backend": BACKEND,
@@ -450,24 +533,39 @@ def _checkpoint(  # noqa: PLR0913, PLR0917
         "mean": list(mean),
         "std": list(std),
         "epoch": epoch,
-        "valid_macro_f1": metrics["macro_f1"],
+        "monitor": monitor,
+        "monitor_value": value,
+        "ema": ema,
         "state_dict": {k: v.detach().cpu() for k, v in model.state_dict().items()},
     }
 
 
-def _write_history(path: Path, history: list[_EpochLog]) -> None:
+def _write_history(path: Path, history: list[_EpochLog], monitor: str) -> None:
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(
-            ["epoch", "train_loss", "valid_accuracy", "valid_macro_f1", "lr", "seconds"]
+            [
+                "epoch",
+                "train_loss",
+                "valid_loss",
+                "valid_accuracy",
+                "valid_balanced_accuracy",
+                "valid_macro_f1",
+                f"monitored_{monitor}",
+                "lr",
+                "seconds",
+            ]
         )
         for log in history:
             writer.writerow(
                 [
                     log.epoch,
                     f"{log.train_loss:.5f}",
+                    f"{log.val_loss:.5f}",
                     f"{log.val_accuracy:.5f}",
+                    f"{log.val_balanced_accuracy:.5f}",
                     f"{log.val_macro_f1:.5f}",
+                    f"{log.monitored:.5f}",
                     f"{log.lr:.3e}",
                     f"{log.seconds:.1f}",
                 ]
@@ -522,7 +620,7 @@ def evaluate_timm_checkpoint(  # noqa: PLR0913, PLR0917
         num_workers=workers,
         pin_memory=torch_device.type == "cuda",
     )
-    confusion, top5 = confusion_over_loader(
+    result = confusion_over_loader(
         model, loader, torch_device, len(class_names), use_amp=False
     )
-    return confusion, top5, class_names
+    return result.confusion, result.top5, class_names

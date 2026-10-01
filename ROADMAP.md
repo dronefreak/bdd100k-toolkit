@@ -215,7 +215,9 @@ Goal: swap models without touching data code.
    Hugging Face SegFormer backend.
 4. **Classification:** `timm` backbones next to Ultralytics. *(done 2026-10-01:
    optional `timm` extra, `model.backend`, macro-F1 checkpointing, class
-   balancing, backend-aware evaluation; comparison results in
+   balancing, EMA, early stopping and metric-based best-checkpoint saving
+   (`training.monitor`) in both backends, backend-aware evaluation; comparison
+   results in
    `docs/classification-results.md`.)*
 5. Every backend must be evaluated by the *same* Phase 3 evaluator.
 

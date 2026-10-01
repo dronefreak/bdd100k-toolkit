@@ -20,12 +20,16 @@ training:
   lr: null  # null = backend default (ultralytics 0.001, timm 3e-4)
   imgsz: 224
   workers: 4
+  # Early stopping and best-checkpoint selection (macro_f1 | balanced_accuracy | accuracy),
+  # evaluated on `valid` every epoch. patience = epochs without improvement (0 = off).
+  monitor: macro_f1
   patience: 20
   # Ultralytics' `auto` picks the optimizer AND ignores lr; set e.g. AdamW to use lr.
   optimizer: auto
   device: auto  # auto = cuda if available, else cpu
   output_dir: experiments/${dataset.name}/${model.name}
   # Extra Ultralytics train() arguments, e.g. +training.extra.fraction=0.1
-  # For timm: weight_decay, label_smoothing, balance (none|loss|sampler),
-  # balance_power, warmup_epochs, pretrained, scale_min, hflip, color_jitter, seed.
+  # For timm: ema (true), ema_decay (0.999), grad_clip (0 = off), weight_decay,
+  # label_smoothing, balance (none|loss|sampler), balance_power, warmup_epochs,
+  # pretrained, scale_min, hflip, color_jitter, seed.
   extra: {}

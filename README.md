@@ -1,6 +1,9 @@
 # BDD100K-Toolkit
 
 Unofficial, modern, dependency-clean toolkit for [BDD100K](https://www.bdd100k.com/) tasks.
+It currently covers the three image-attribute classification tasks (period,
+weather, scenario). Further tasks will be added here once they are done and
+verified on real data.
 
 ## Why this exists
 
@@ -16,7 +19,8 @@ even the ETH mirror) is largely unreachable as reported across a dozen open
 issues. BDD100K the *dataset* is still widely used; the *tooling* is not.
 
 This project starts small and depends only on modern, actively maintained
-libraries (Hydra, Ultralytics, PyTorch), with no `scalabel` and no pinned pydantic.
+libraries (Hydra, Ultralytics, PyTorch, optionally timm), with no `scalabel`
+and no pinned pydantic.
 
 See [`VISION.md`](VISION.md) for the full rationale, architectural
 philosophy, and task status, and [`ROADMAP.md`](ROADMAP.md) for the
@@ -24,35 +28,32 @@ granular checklist.
 
 ## Tasks
 
-| Task | Status | Classes | Source |
-|---|---|---|---|
-| Time-of-day (period) classification, unofficial | ✅ | 4 (daytime, night, dawn or dusk, unknown) | `attributes.timeofday` |
-| Weather classification, unofficial | ✅ | 7 (clear, partly cloudy, overcast, rainy, snowy, foggy, unknown) | `attributes.weather` |
-| Scenario (scene) classification, unofficial | ✅ | 7 (city street, highway, residential, parking lot, gas stations, tunnel, unknown) | `attributes.scene` |
-| Object detection | ✅ | 10 | native `box2d` labels |
-| Semantic segmentation | ✅ | 19 | native `sem_seg` masks |
-| Instance segmentation | planned | n/a | native `ins_seg` masks (RLE) |
-| Panoptic segmentation | planned | n/a | native `pan_seg` masks |
-| Multi-object tracking | planned | n/a | native `box_track` labels |
+| Task | Classes | Source |
+|---|---|---|
+| Time-of-day (period) classification, unofficial | 4 (daytime, night, dawn or dusk, unknown) | `attributes.timeofday` |
+| Weather classification, unofficial | 7 (clear, partly cloudy, overcast, rainy, snowy, foggy, unknown) | `attributes.weather` |
+| Scenario (scene) classification, unofficial | 7 (city street, highway, residential, parking lot, gas stations, tunnel, unknown) | `attributes.scene` |
 
-The three classification tasks are **unofficial**: BDD100K defines no
-classification benchmark, only per-image `attributes: {weather, timeofday,
-scene}` in its detection label JSON. The tasks follow three Kaggle datasets
-(`bdd100k-period-classification`, `bdd100k-weather-classification`,
-`bdd100k-scenario-classification`, uploaded by `marquis03`, Apache-2.0 on
-Kaggle). Checked image by image against the official 2018 labels, those
-datasets are the same labels and the same images, with `unknown` being the
-official `undefined` value and their `test` folder being the official
-unlabeled test split (ignored here). `unknown` is kept as a class by default
-(`--exclude-unknown` drops it).
+These tasks are **unofficial**: BDD100K defines no classification benchmark,
+only per-image `attributes: {weather, timeofday, scene}` in its detection label
+JSON. The tasks follow three Kaggle datasets (`bdd100k-period-classification`,
+`bdd100k-weather-classification`, `bdd100k-scenario-classification`, uploaded
+by `marquis03`, Apache-2.0 on Kaggle). Checked image by image against the
+official 2018 labels, those datasets are the same labels and the same images,
+with `unknown` being the official `undefined` value and their `test` folder
+being the official unlabeled test split (ignored here). `unknown` is kept as a
+class by default (`--exclude-unknown` drops it).
 
 Licensing: the Apache-2.0 label on a Kaggle re-upload does not by itself
 change the terms of the underlying BDD100K images and labels (see License
 below). This toolkit never redistributes data.
 
-## Data layout
+The label distribution is heavily imbalanced (for example 13 `foggy` and 7
+`gas stations` images in the test split), so evaluation reports per-class
+precision, recall and F1 and the macro averages, not just top-1 accuracy. See
+[`docs/data-notes.md`](docs/data-notes.md) for the real counts.
 
-### Classification
+## Data layout
 
 Two input layouts are auto-detected under `--raw-dir`:
 
@@ -71,8 +72,7 @@ raw_dir/
 Both produce identical output (verified on the real data for all three
 tasks). Official `val` becomes `test`; a seeded 15% of `train` becomes
 `valid`. The holdout is chosen over the sorted names of all train images, so
-it is the same for all three tasks, for detection, and with or without
-`--exclude-unknown`.
+it is the same for all three tasks and with or without `--exclude-unknown`.
 
 Canonical output (plain `torchvision.datasets.ImageFolder` layout:
 Ultralytics' classification trainer reads this directly, no glue needed):
@@ -84,58 +84,14 @@ canonical_out/
   test/<class>/*.jpg
 ```
 
-### Detection
-
-Same raw input as classification (`box2d` labels live in the same JSON
-files). Either the 2020 revision `labels/det_20/det_{train,val}.json`
-(preferred when present; the official docs recommend it) or the 2018
-`labels/bdd100k_labels_images_{train,val}.json` works; both naming schemes
-(`person/motor/bike` and `pedestrian/motorcycle/bicycle`) are accepted. Only
-the 2018 file is guaranteed to carry the frame `attributes` that the
-classification tasks need. Canonical output is COCO, bridged into Ultralytics YOLO format by a
-generic converter:
-
-```text
-canonical_coco/
-  train/{_annotations.coco.json,*.jpg}
-  valid/{_annotations.coco.json,*.jpg}
-  test/{_annotations.coco.json,*.jpg}
-
-yolo_out/
-  images/{train,val,test}/*.jpg
-  labels/{train,val,test}/*.txt
-  data.yaml
-```
-
-### Semantic segmentation
-
-**Different raw image package**: BDD100K's segmentation tasks ship with
-the separate "10K Images" package (`images/10k/...`), not the 100K set used
-above; per BDD100K's own docs this "is not a subset of the 100K images, even
-though there is a significant overlap", so this needs its own download.
-
-```text
-raw_dir/
-  images/10k/{train,val,test}/*.jpg
-  labels/sem_seg/masks/{train,val}/*.png   # 1-channel, pixel value = class id, 255 = ignore
-
-canonical_out/
-  train/{images,masks}/*.{jpg,png}
-  valid/{images,masks}/*.{jpg,png}
-  test/{images,masks}/*.{jpg,png}
-```
-
 ## Quickstart
 
-Four commands cover every task: `bdd100k-prepare`, `bdd100k-train`,
-`bdd100k-evaluate` and `bdd100k-coco-to-yolo`. The task is inferred from the
-dataset key (`--dataset` / `dataset=`); `--task` / `task=` overrides it, and
-running a command with `--help` lists every dataset.
+Three commands: `bdd100k-prepare`, `bdd100k-train` and `bdd100k-evaluate`. The
+task is inferred from the dataset key (`--dataset` / `dataset=`), and running a
+command with `--help` lists the available datasets.
 
 ```bash
 pip install -e ".[dev]"
-
-# --- Classification ---
 
 # 1. Convert a download into canonical weather-classification splits.
 #    --raw-dir is either the official download or a Kaggle class-folder tree;
@@ -152,42 +108,9 @@ bdd100k-train dataset=bdd100k-weather model.name=yolo11n-cls \
 bdd100k-evaluate --dataset bdd100k-weather \
     --checkpoint experiments/bdd100k-weather/yolo11n-cls/weights/best.pt \
     --data-dir /path/to/canonical_out
-
-# --- Detection ---
-
-# 1. Convert the same raw BDD100K download into canonical COCO detection splits
-bdd100k-prepare --dataset bdd100k-detection \
-    --raw-dir /path/to/bdd100k_raw --output-dir /path/to/canonical_coco
-
-# 2. Bridge into Ultralytics YOLO format
-bdd100k-coco-to-yolo \
-    --input-dir /path/to/canonical_coco --output-dir /path/to/yolo_out
-
-# 3. Train (evaluates the best checkpoint afterward; dataset_yaml is required)
-bdd100k-train dataset=bdd100k-detection model.name=yolo11n \
-    dataset.dataset_yaml=/path/to/yolo_out/data.yaml
-
-# 4. Evaluate a checkpoint directly
-bdd100k-evaluate \
-    --checkpoint experiments/bdd100k-detection/yolo11n/weights/best.pt \
-    --dataset bdd100k-detection --dataset-yaml /path/to/yolo_out/data.yaml
-
-# --- Semantic segmentation ---
-
-# 1. Convert a raw BDD100K 10K-images download into canonical image/mask splits
-bdd100k-prepare --dataset bdd100k-semantic-seg \
-    --raw-dir /path/to/bdd100k_10k_raw --output-dir /path/to/canonical_out
-
-# 2. Train (needs the `segmentation` extra: pip install -e ".[segmentation]")
-bdd100k-train dataset=bdd100k-semantic-seg \
-    model.architecture=Unet model.encoder_name=resnet34 \
-    dataset.data_dir=/path/to/canonical_out
-
-# 3. Evaluate (prints + saves per-class IoU and mIoU)
-bdd100k-evaluate \
-    --checkpoint experiments/bdd100k-semantic-seg/Unet-resnet34/model.pt \
-    --dataset bdd100k-semantic-seg --data-dir /path/to/canonical_out
 ```
+
+The same three commands work for `bdd100k-period` and `bdd100k-scenario`.
 
 ## Classification backends
 
@@ -209,20 +132,40 @@ bdd100k-evaluate --dataset bdd100k-weather --checkpoint <run>/weights/best.pt \
     --data-dir /path/to/canonical_out   # the backend is detected from the file
 ```
 
-The timm backend is a small PyTorch loop written for these tasks: it keeps the
-checkpoint with the best **macro F1** on `valid` (not top-1), resizes the whole
-image to a square at train and test time (no centre crop that would cut off
-the sky or the road edge), and uses no colour jitter by default because
-brightness is the time-of-day label. Both backends are evaluated by the same
-report (per-class F1, macro F1, confusion matrix).
+Both backends are evaluated by the same report (per-class F1, macro F1,
+confusion matrix).
+
+### Training features
+
+| Feature | `ultralytics` | `timm` |
+|---|---|---|
+| EMA of the weights | always on (built in); `best.pt` and `last.pt` hold the EMA weights | on by default (`timm.utils.ModelEmaV3`); `+training.extra.ema=false`, `+training.extra.ema_decay=0.999`; validation and checkpoints use the EMA weights |
+| Early stopping | `training.patience` (0 = off) | `training.patience` (0 = off) |
+| Best-checkpoint saving | `best.pt` by the monitored metric (below), plus `last.pt` | `best.pt` by the monitored metric, plus `last.pt` and a per-epoch `results.csv` |
+| Monitored metric | `training.monitor` | `training.monitor` |
+| Gradient clipping | via `+training.extra.<ultralytics arg>` | `+training.extra.grad_clip=1.0` |
+
+`training.monitor` is `macro_f1` (default), `balanced_accuracy` or `accuracy`,
+computed on `valid` every epoch, and it drives both `best.pt` and early
+stopping. Ultralytics' own classification fitness is `(top-1 + top-5) / 2`,
+which with at most 7 classes is almost always plain top-1, so the Ultralytics
+backend replaces it with the monitored metric. `training.patience` counts
+epochs without improvement of that metric.
+
+The timm backend is a small PyTorch loop written for these tasks. It resizes
+the whole image to a square at train and test time (no centre crop that would
+cut off the sky or the road edge) and uses no colour jitter by default, because
+brightness is the time-of-day label. It also supports class balancing
+(`+training.extra.balance=loss|sampler`), label smoothing, weight decay and a
+warmup plus cosine schedule.
 
 ## Failing loudly
 
 Prepare commands never finish "successfully" with an empty `train` or `test`
-split (e.g. a wrong raw layout): they raise `EmptySplitError`. Everything an
-adapter drops (missing images, degenerate boxes, ignored regions such as
-`other person`, `other vehicle` and `trailer`, and unknown categories) is
-counted and printed per split; classes with zero boxes raise a warning.
+split (for example a wrong raw layout): they raise `EmptySplitError`. Anything
+an adapter drops (images with no label file, unexpected attribute values,
+excluded `unknown` images) is counted and printed per split, and classes with
+no training images raise a warning.
 
 Train configs have no machine-local paths: required values such as
 `dataset.data_dir` are Hydra `???` and must be passed on the command line.
