@@ -12,16 +12,18 @@ if TYPE_CHECKING:
 
 
 def median_prediction(
-    predictor: Predictor, image: Image.Image, runs: int
+    predictor: Predictor, image: Image.Image, runs: int, *, warmup: bool = True
 ) -> Prediction:
     """
     Predict ``runs`` times after a warm-up and return the median-latency result.
 
-    One timed call is noisy (it can be 50 times slower than steady state).
+    One timed call is noisy (it can be 50 times slower than steady state). Pass
+    ``warmup=False`` if the predictor already ran (e.g. on the previous image).
     """
     if runs < 1:
         raise ValueError(f"runs must be at least 1, got {runs}")
-    predictor.predict(image)
+    if warmup:
+        predictor.predict(image)
     results = [predictor.predict(image) for _ in range(runs)]
     middle = statistics.median_low(r.seconds for r in results)
     return next(r for r in results if r.seconds == middle)

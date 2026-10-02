@@ -18,21 +18,24 @@ from bdd100k_toolkit.utils.draw import (
     short_note,
 )
 
-OVERLAY_SIZE = 0.5  # overall size of the overlay, relative to the original design
+MIN_SIZE = 0.5  # overlay size at size=0, relative to the original (first) design
 FAKE_BOLD_FROM = 20  # font size (px) from which names are drawn slightly bolder
 
 
-def render_overlay(image: Image.Image, rows: list[TaskResult]) -> Image.Image:
+def render_overlay(
+    image: Image.Image, rows: list[TaskResult], size: float = 0.0
+) -> Image.Image:
     """
     Return ``image`` with each task's prediction drawn on it in a frosted-glass panel.
 
     The panel sits top left (the picture behind it is blurred and darkened, so it
     reads on bright and dark frames alike); a small pill bottom right shows the
     total latency. Sizes scale with the image width, so any resolution looks alike,
-    and ``OVERLAY_SIZE`` sets how much of the picture the overlay takes.
+    and ``size`` (0 to 1) sets how much of the picture the overlay takes: 0 is the
+    default compact overlay, 1 is twice that (the original design).
     """
     base = max(image.width / 1280, 0.4)  # 1.0 for a 1280 px wide frame
-    scale = base * OVERLAY_SIZE
+    scale = base * (MIN_SIZE + (1 - MIN_SIZE) * size)
 
     def px(value: float) -> int:
         return max(1, round(value * scale))

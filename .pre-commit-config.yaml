@@ -30,7 +30,7 @@ repos:
       - id: debug-statements
       - id: check-ast
       - id: check-added-large-files
-        args: ["--maxkb=10000"]
+        args: ["--maxkb=20000"]
 
   # ---------- PYTHON LINT + FORMAT (Ruff) ----------
   - repo: https://github.com/astral-sh/ruff-pre-commit

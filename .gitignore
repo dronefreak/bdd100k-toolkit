@@ -30,3 +30,6 @@ experiments/
 # Bash scripts and logs
 *.sh
 *.log
+
+# huggingface model cards
+model_cards/
