@@ -63,7 +63,7 @@ The label distribution is heavily imbalanced (for example 13 `foggy` and 7
 precision, recall and F1 and the macro averages, not just top-1 accuracy. See
 [`docs/data-notes.md`](docs/data-notes.md) for the real counts.
 
-## Model Zoo
+### Classification Model Zoo on HuggingFace
 
 | Task | Model | Macro F1 | Top-1 | Balanced acc | Macro precision |
 |---|---|---|---|---|---|
@@ -71,7 +71,7 @@ precision, recall and F1 and the macro averages, not just top-1 accuracy. See
 | Period (time of day) | [EfficientViT-B0](https://huggingface.co/dronefreak/bdd100k-period-efficientvit_b0) | 80.98% | 93.71% | 77.14% | 86.44% |
 | Scenario | [MobileNetV4-Conv-Small](https://huggingface.co/dronefreak/bdd100k-scenario-mobilenetv4_conv_small) | 52.89% | 78.20% | 48.69% | 61.41% |
 
-## Data layout
+### Data layout
 
 Two input layouts are auto-detected under `--raw-dir`:
 
@@ -102,7 +102,7 @@ canonical_out/
   test/<class>/*.jpg
 ```
 
-## Quickstart
+### Quickstart
 
 Three commands: `bdd100k-prepare`, `bdd100k-train` and `bdd100k-evaluate`. The
 task is inferred from the dataset key (`--dataset` / `dataset=`), and running a
@@ -130,7 +130,7 @@ bdd100k-evaluate --dataset bdd100k-weather \
 
 The same three commands work for `bdd100k-period` and `bdd100k-scenario`.
 
-## Classification backends
+### Classification backends
 
 Two backends train the classification tasks, chosen with `model.backend`:
 
