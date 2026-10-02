@@ -13,6 +13,12 @@ Pixel-level labels for the 10K BDD100K images (7K train, 1K val, 2K test).
 No trained models yet. Semantic segmentation will be the first, once the real-data run and
 the official-style mIoU evaluation are done.
 
+## Download Data
+
+Needs the `10K Images` plus the `Semantic Segmentation` labels (instance and panoptic use
+`Instance Segmentation` and `Panoptic Segmentation`). The official BDD100K website is down and there
+is no Hugging Face copy yet, so there is currently no reliable download source for these.
+
 ## Usage
 
 ```bash

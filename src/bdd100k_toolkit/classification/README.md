@@ -7,7 +7,7 @@ three Kaggle datasets (`marquis03`, Apache-2.0), which are the same images and l
 the official release, with `unknown` being the official `undefined`. The labels are the 2018
 `attributes` in `bdd100k_labels_images_{train,val}.json`.
 
-![Classifiers running on a sunny day clip and a night clip](../../../docs/assets/demo.gif)
+![BDD100K detector and weather, period and scenario classifiers running on two city drives, side by side](../../../docs/assets/demo.gif)
 
 | Task | Classes | Source |
 |---|---|---|
@@ -29,10 +29,29 @@ heavily imbalanced. Two backends: `ultralytics` (YOLO classifiers) and `timm` (a
 Seven models per task were compared, plus class balancing, bigger models and higher
 resolution; the differences between the small models are within noise.
 
+## Download Data
+
+The official BDD100K website is down, so these are unofficial redistributions on Hugging Face (official
+train and val images, 2018 labels, no test split; the official val set becomes `test`). Download the
+dataset for the task you need:
+
+| Task | Dataset |
+|---|---|
+| Weather | [dronefreak/BDD100K-Weather-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Weather-Classification) |
+| Period | [dronefreak/BDD100K-Period-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification) |
+| Scenario | [dronefreak/BDD100K-Scenario-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification) |
+
+```bash
+hf download dronefreak/BDD100K-Weather-Classification --repo-type dataset --local-dir /path/to/weather
+```
+
+`bdd100k-prepare` detects the layout itself, so a copy of the official download (images plus label
+JSON) and the Kaggle class folders work too. All three give the same `{train,valid,test}/<class>/*.jpg` output.
+
 ## Usage
 
 ```bash
-bdd100k-prepare  --dataset bdd100k-weather --raw-dir /path/to/bdd100k --output-dir /path/to/out
+bdd100k-prepare  --dataset bdd100k-weather --raw-dir /path/to/weather --output-dir /path/to/out
 bdd100k-train    dataset=bdd100k-weather model.name=yolo11n-cls dataset.data_dir=/path/to/out
 bdd100k-evaluate --dataset bdd100k-weather --checkpoint <run>/weights/best.pt --data-dir /path/to/out
 
@@ -45,16 +64,3 @@ python demo/classify.py --image frame.jpg --model weather=<run>/weights/best.pt
 ```
 
 The same commands work for `bdd100k-period` and `bdd100k-scenario`.
-
-The easiest input is the Hugging Face copy (official train and val images, 2018 labels, no
-test split; the official val set becomes `test`): [weather](https://huggingface.co/datasets/dronefreak/BDD100K-Weather-Classification),
-[period](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification),
-[scenario](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification).
-
-```bash
-hf download dronefreak/BDD100K-Weather-Classification --repo-type dataset --local-dir /path/to/weather
-bdd100k-prepare --dataset bdd100k-weather --raw-dir /path/to/weather --output-dir /path/to/out
-```
-
-`bdd100k-prepare` detects the layout itself, so the official download (images plus label JSON)
-and the Kaggle class folders work too. All three give the same `{train,valid,test}/<class>/*.jpg` output.

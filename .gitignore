@@ -20,6 +20,9 @@ experiments/
 *.pth
 *.ckpt
 
+# Loose source clips in the repo root (the demo clips live in demo/videos/)
+/*.mp4
+
 .vscode/
 .idea/
 .DS_Store
@@ -33,3 +36,6 @@ experiments/
 
 # huggingface model cards
 model_cards/
+
+# Demos
+demo/videos/

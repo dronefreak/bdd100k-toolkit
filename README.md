@@ -8,11 +8,11 @@
 [![Backends: Ultralytics, timm](https://img.shields.io/badge/backends-Ultralytics%20%7C%20timm-informational)](src/bdd100k_toolkit/classification)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff)
 
-![Weather, period and scenario classifiers running on a sunny day clip and a night clip](docs/assets/demo.gif)
+![BDD100K detector and weather, period and scenario classifiers running on two city drives, side by side](docs/assets/demo.gif)
 
-An unofficial, modern toolkit for the [BDD100K dataset](https://www.bdd100k.com/). It prepares the data, trains and evaluates models with current libraries (PyTorch, Ultralytics, timm, Hydra), and renders demos on images and videos. The official [toolkit](https://github.com/bdd100k/bdd100k) and [model zoo](https://github.com/SysCV/bdd100k-models) are unmaintained and no longer install cleanly, so this project rebuilds the parts that matter, one task at a time, each checked on real data. The goal is a set of reproducible baselines for others to build on.
+An unofficial, modern toolkit for the [BDD100K dataset](https://arxiv.org/abs/1805.04687). It prepares the data, trains and evaluates models with current libraries (PyTorch, Ultralytics, timm, Hydra), and renders demos on images and videos. The official [toolkit](https://github.com/bdd100k/bdd100k) and [model zoo](https://github.com/SysCV/bdd100k-models) are unmaintained and no longer install cleanly, so this project rebuilds the parts that matter, one task at a time, each checked on real data. The goal is a set of reproducible baselines for others to build on.
 
-This repository currently supports the tasks listed below. For more information about each task, click on the task name.
+This repository currently supports the tasks listed below. For more information about each task, please click on the individual task's name.
 
 - [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks)
 - [**Object Detection**](src/bdd100k_toolkit/detection): 10 classes, YOLO models
@@ -41,6 +41,8 @@ The same three commands work for every task; `--help` lists the datasets. Each t
 
 ## Dataset
 
+The official BDD100K website (bdd100k.com, bdd-data.berkeley.edu) is down and has been unreachable, so the datasets below are unofficial redistributions on Hugging Face, which the BDD100K license allows as long as the copyright notice is carried forward.
+
 To use this toolkit, download the datasets from Hugging Face (all with the original 2018 labels):
 
 | Task | Dataset |
@@ -55,12 +57,12 @@ hf download dronefreak/BDD100K-Weather-Classification --repo-type dataset --loca
 bdd100k-prepare --dataset bdd100k-weather --raw-dir /path/to/weather --output-dir /path/to/out
 ```
 
-`bdd100k-prepare` detects the layout itself. The official download from
-[bdd100k.com](https://www.bdd100k.com/) (registration required) and the Kaggle class folders work too.
+`bdd100k-prepare` detects the layout itself, so a copy of the official download (images plus label JSON)
+and the Kaggle class folders work too.
 
 ## License
 
-BSD-3-Clause for the code. BDD100K data, including the Hugging Face copy, stays under the [BDD100K License](https://www.bdd100k.com/): free for educational, research and not-for-profit use with the UC Regents copyright notice carried forward; commercial use needs separate permission.
+BSD-3-Clause for the code. BDD100K data, including the Hugging Face copy, stays under the [BDD100K License](https://github.com/bdd100k/bdd100k/blob/master/doc/source/license.rst): free for educational, research and not-for-profit use with the UC Regents copyright notice carried forward; commercial use needs separate permission.
 
 ## Citation
 

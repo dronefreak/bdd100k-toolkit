@@ -30,26 +30,33 @@ All weights: the [BDD100K object detection model zoo](https://huggingface.co/col
 
 Weakest classes: `train` (15 test boxes), `traffic light` and `traffic sign` (small objects).
 
-## Usage
+## Download Data
 
-Easiest input: the YOLO-format Hugging Face dataset, which needs no prepare step. Its `data.yaml`
-has `path: .`, which Ultralytics resolves from the current directory, so point it at the folder first:
+The official BDD100K website is down, so this is an unofficial redistribution on Hugging Face: the
+YOLO-format dataset with the original 2018 labels (59,384 train, 10,479 valid and 10,000 test images),
+[dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K).
 
 ```bash
 hf download dronefreak/BDD100K --repo-type dataset --local-dir /path/to/bdd100k
 sed -i "s#^path:.*#path: /path/to/bdd100k/data#" /path/to/bdd100k/data/data.yaml
-bdd100k-train dataset=bdd100k-detection model.name=yolo11n \
-    dataset.dataset_yaml=/path/to/bdd100k/data/data.yaml
 ```
 
-Or start from the official download (also accepts the 2020 `det_20` labels):
+Its `data.yaml` has `path: .`, which Ultralytics resolves from the current directory, so the `sed`
+points it at the folder. A copy of the official download (images plus `det_20` or 2018 labels) works
+too, via `bdd100k-prepare` below.
+
+## Usage
 
 ```bash
-bdd100k-prepare --dataset bdd100k-detection --raw-dir /path/to/bdd100k --output-dir /path/to/coco
-bdd100k-coco-to-yolo --input-dir /path/to/coco --output-dir /path/to/yolo
-bdd100k-train dataset=bdd100k-detection model.name=yolo11n dataset.dataset_yaml=/path/to/yolo/data.yaml
+# HF dataset: no prepare step needed
+bdd100k-train dataset=bdd100k-detection model.name=yolo11n \
+    dataset.dataset_yaml=/path/to/bdd100k/data/data.yaml
 bdd100k-evaluate --dataset bdd100k-detection --checkpoint <run>/weights/best.pt \
-    --dataset-yaml /path/to/yolo/data.yaml
+    --dataset-yaml /path/to/bdd100k/data/data.yaml
+
+# official download: convert first, then train with /path/to/yolo/data.yaml
+bdd100k-prepare --dataset bdd100k-detection --raw-dir /path/to/bdd100k_raw --output-dir /path/to/coco
+bdd100k-coco-to-yolo --input-dir /path/to/coco --output-dir /path/to/yolo
 ```
 
 Defaults (50 epochs, imgsz 960, SGD, cosine) are in `configs/config_detection.yaml`; extra
