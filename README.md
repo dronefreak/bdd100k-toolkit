@@ -37,7 +37,10 @@ See [`VISION.md`](VISION.md) for the full rationale, architectural
 philosophy, and task status, and [`ROADMAP.md`](ROADMAP.md) for the
 granular checklist.
 
-## Tasks: Classification
+## Tasks
+
+<details>
+<summary><b>Classification</b> (period, weather, scenario)</summary>
 
 | Task | Classes | Source |
 |---|---|---|
@@ -59,6 +62,8 @@ The label distribution is heavily imbalanced (for example 13 `foggy` and 7
 `gas stations` images in the test split), so evaluation reports per-class
 precision, recall and F1 and the macro averages, not just top-1 accuracy. See
 [`docs/data-notes.md`](docs/data-notes.md) for the real counts.
+
+</details>
 
 ## Model Zoo
 
