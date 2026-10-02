@@ -164,8 +164,8 @@ never redistributes BDD100K data itself.
 
 ## Roadmap
 
-- [ ] Add scenario/weather/period classification datasets
-  - [ ] Add demo support for images/videos
+- [x] Add scenario/weather/period classification datasets
+  - [x] Add demo support for images/videos
 - [ ] Add object detection dataset support
   - [ ] Add demo support for images/videos
 - [ ] Add semantic segmentation dataset support
