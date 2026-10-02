@@ -36,6 +36,23 @@ def _as_kaggle_folders(raw_dir: Path, attribute: str, out: Path) -> Path:
     return out
 
 
+def _as_hf_dataset(raw_dir: Path, attribute: str, out: Path) -> Path:
+    """Re-express the fake official download as the Hugging Face shard layout."""
+    for split, hf_split in (("train", "train"), ("val", "valid")):
+        shard = out / "data" / "images" / hf_split / "shard_000"
+        shard.mkdir(parents=True)
+        entries = json.loads(
+            (raw_dir / "labels" / f"bdd100k_labels_images_{split}.json").read_text()
+        )
+        rows = []
+        for entry in entries:
+            raw = entry["attributes"][attribute]
+            shutil.copy(raw_dir / "images" / "100k" / split / entry["name"], shard)
+            rows.append({"file_name": entry["name"], "label": _CLASS_DIR.get(raw, raw)})
+        (shard / "metadata.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+    return out
+
+
 @pytest.mark.parametrize(
     ("key", "attribute"),
     [
@@ -54,6 +71,10 @@ def test_both_layouts_give_identical_output(
     get(key).prepare_classification(folders, from_folders)
     assert _listing(from_official) == _listing(from_folders)
     assert not any("unlabeled" in str(p) for p in from_folders.rglob("*.jpg"))
+    hf = _as_hf_dataset(raw_bdd100k_dir, attribute, tmp_path / "hf")
+    from_hf = tmp_path / "from_hf"
+    get(key).prepare_classification(hf, from_hf)
+    assert _listing(from_official) == _listing(from_hf)
 
 
 def test_exclude_unknown_keeps_the_same_holdout(

@@ -84,8 +84,9 @@ class BDD100KSemanticSegAdapter(SemanticSegAdapter):
         ),
         homepage="https://www.bdd100k.com/",
         license=(
-            "BDD100K License (non-commercial research/education; "
-            "registration-gated, no redistribution)."
+            "BDD100K License (UC Regents): educational, research and "
+            "not-for-profit use and redistribution with the copyright notice "
+            "carried forward; commercial use needs separate permission."
         ),
     )
 

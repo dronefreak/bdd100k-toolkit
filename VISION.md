@@ -108,8 +108,10 @@ exact resume points.
 ## Constraints to keep respecting
 
 - **Data access**: BDD100K is distributed under its own license
-  (non-commercial, registration-gated); this project never redistributes
-  data, only code that transforms a user's own local download.
+  (free for educational, research and not-for-profit use, with the copyright
+  notice carried forward; commercial use needs permission). The code only
+  transforms a user's own local download; a YOLO-format detection copy with the
+  2018 labels is hosted separately at `dronefreak/BDD100K` on Hugging Face.
 - **No `git add`/`git commit` without being explicitly asked**: this
   repo intentionally has no git history yet; commits happen only on
   explicit instruction.

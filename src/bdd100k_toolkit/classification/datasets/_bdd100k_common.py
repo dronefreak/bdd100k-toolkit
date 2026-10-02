@@ -10,7 +10,7 @@ image against the official JSON, are identical: ``unknown`` is the official
 slash cannot be a folder name. Their ``test`` folder is the official unlabeled
 test split and is never used.
 
-Two input layouts are accepted (auto-detected under ``raw_dir``):
+Three input layouts are accepted (auto-detected under ``raw_dir``):
 
 ``official``
     ``images/100k/{train,val}/**/*.jpg`` plus
@@ -19,11 +19,16 @@ Two input layouts are accepted (auto-detected under ``raw_dir``):
 ``folders``
     ``{train,val}/<class>/*.jpg``, the Kaggle layout. A loose ``test/`` folder
     is ignored.
+``hf``
+    The Hugging Face datasets ``dronefreak/BDD100K-{Weather,Period,Scenario}-
+    Classification``: ``data/images/{train,valid}/shard_*/`` with the jpgs and a
+    ``metadata.jsonl`` per shard (``{"file_name": ..., "label": <class>}``).
+    ``raw_dir`` is the downloaded repo root; ``valid`` is the official val set.
 
 Whichever is used, the output and the splits are the same: official ``val``
 becomes ``test``, and a seeded 15% of ``train`` becomes ``valid``. The holdout
 is chosen over the sorted image names of *all* train images (before any class
-filtering), so it is identical across both layouts, across the three tasks, and
+filtering), so it is identical across all layouts, across the three tasks, and
 for the detection task, and it does not change with ``include_unknown``.
 
 ``unknown`` images are kept as a class by default (the Kaggle definition) and
@@ -49,7 +54,7 @@ SPLIT_SEED = 42
 UNKNOWN_CLASS = "unknown"
 RAW_UNDEFINED = "undefined"
 
-Layout = Literal["official", "folders"]
+Layout = Literal["official", "folders", "hf"]
 INFO_FILENAME = "prepare_info.json"
 
 
@@ -80,14 +85,17 @@ def detect_layout(raw_dir: Path, labels_dir: Path | None = None) -> Layout:
         labels_dir or raw_dir / "labels"
     ).is_dir()
     folders = (raw_dir / "train").is_dir() and (raw_dir / "val").is_dir()
+    hf = (raw_dir / "data" / "images" / "train").is_dir()
     if official:
         return "official"
     if folders:
         return "folders"
+    if hf:
+        return "hf"
     raise FileNotFoundError(
         f"Unrecognised layout under {raw_dir}. Expected either "
-        "images/100k/{train,val} + labels/ (or --labels-dir), or "
-        "{train,val}/<class>/*.jpg."
+        "images/100k/{train,val} + labels/ (or --labels-dir), "
+        "{train,val}/<class>/*.jpg, or the Hugging Face data/images/{train,valid}/."
     )
 
 
@@ -135,6 +143,8 @@ def prepare_attribute_classification(  # noqa: PLR0913
             aliases or {},
             include_unknown,
         )
+    elif layout == "hf":
+        train, val = _samples_from_hf(raw_dir, classes, include_unknown)
     else:
         train, val = _samples_from_folders(raw_dir, classes, include_unknown)
     options = image_options or ImageOptions()
@@ -269,6 +279,38 @@ def _samples_from_folders(
     test_dir = raw_dir / "test"
     if test_dir.is_dir():
         print(f"Ignoring unlabeled test images in {test_dir}")
+    return result[0], result[1]
+
+
+def _samples_from_hf(
+    raw_dir: Path, classes: list[str], include_unknown: bool
+) -> tuple[list[_Sample], list[_Sample]]:
+    """Read train and val samples from the Hugging Face shards + ``metadata.jsonl``."""
+    known = {*classes, UNKNOWN_CLASS}
+    result: list[list[_Sample]] = []
+    for split in ("train", "valid"):
+        samples: list[_Sample] = []
+        shards = sorted((raw_dir / "data" / "images" / split).glob("shard_*"))
+        for shard in shards:
+            for line in (
+                (shard / "metadata.jsonl").read_text(encoding="utf-8").splitlines()
+            ):
+                row = json.loads(line)
+                name, raw = row["file_name"], row["label"]
+                path = shard / name
+                if not path.is_file():
+                    samples.append(
+                        _Sample(name, None, None, "label without image file")
+                    )
+                elif raw == UNKNOWN_CLASS and not include_unknown:
+                    samples.append(_Sample(name, path, None, "unknown excluded"))
+                elif raw in known:
+                    samples.append(_Sample(name, path, raw))
+                else:
+                    samples.append(
+                        _Sample(name, path, None, f"unexpected value {raw!r}")
+                    )
+        result.append(samples)
     return result[0], result[1]
 
 
