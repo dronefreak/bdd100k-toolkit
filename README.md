@@ -63,8 +63,6 @@ The label distribution is heavily imbalanced (for example 13 `foggy` and 7
 precision, recall and F1 and the macro averages, not just top-1 accuracy. See
 [`docs/data-notes.md`](docs/data-notes.md) for the real counts.
 
-</details>
-
 ## Model Zoo
 
 | Task | Model | Macro F1 | Top-1 | Balanced acc | Macro precision |
@@ -154,6 +152,8 @@ bdd100k-evaluate --dataset bdd100k-weather --checkpoint <run>/weights/best.pt \
 
 Both backends are evaluated by the same report (per-class F1, macro F1,
 confusion matrix).
+
+</details>
 
 ## License
 
