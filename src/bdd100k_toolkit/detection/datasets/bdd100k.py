@@ -47,17 +47,15 @@ BDD100K's own labelled splits are ``train`` (69,863 labelled images) and
 as a held-out eval set, not for training) and carves a seeded validation
 set out of ``train`` (``_VAL_FRACTION``).
 
-License: Berkeley DeepDrive's own **BDD100K License**: free for
-non-commercial research/educational use; commercial use and redistribution
-require separate permission. The data itself is registration-gated (manual
-DUA click-through on the official site). That Kaggle mirror declares no
-license of its own (Kaggle lists it as "Other (specified in description)",
-i.e. the original BDD100K terms still apply) and is not an official
-Berkeley DeepDrive distribution channel, so it does not change the
-underlying terms or grant any redistribution right. Fine to build/evaluate
-against locally. **No Hugging Face mirror**: the DUA does not permit
-redistribution, regardless of which download channel the raw files came
-from.
+License: Berkeley DeepDrive's own **BDD100K License** (UC Regents): free for
+educational, research and not-for-profit use, including copying and
+redistribution, provided the copyright notice and license paragraphs are carried
+forward; commercial use is restricted to BDD/BAIR Commons members. The official
+download is registration-gated. That Kaggle mirror declares no license of its
+own (Kaggle lists it as "Other (specified in description)"), so the original
+terms apply. **Hugging Face copy**: ``dronefreak/BDD100K`` redistributes the
+detection images and the *2018* labels (YOLO format) under these terms, with the
+notice reproduced on its card.
 """
 
 from __future__ import annotations
@@ -156,8 +154,9 @@ class BDD100KDetectionAdapter(DatasetAdapter):
             "}"
         ),
         license=(
-            "BDD100K License (non-commercial research/education; "
-            "registration-gated, no redistribution)."
+            "BDD100K License (UC Regents): educational, research and "
+            "not-for-profit use and redistribution with the copyright notice "
+            "carried forward; commercial use needs separate permission."
         ),
     )
 

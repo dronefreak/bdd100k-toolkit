@@ -53,6 +53,10 @@ def train_and_evaluate(cfg: DictConfig) -> None:
         output_dir=cfg.training.output_dir,
         workers=cfg.training.workers,
         patience=cfg.training.patience,
+        optimizer=cfg.training.optimizer,
+        cos_lr=cfg.training.cos_lr,
+        use_amp=cfg.training.use_amp,
+        **dict(OmegaConf.to_container(cfg.training.extra, resolve=True)),  # type: ignore[arg-type]
     )
     if not results["model_path"]:
         raise RuntimeError("Training completed without producing a model checkpoint.")
