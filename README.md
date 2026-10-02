@@ -155,6 +155,21 @@ confusion matrix).
 
 </details>
 
+<details>
+<summary><b>Object Detection</b></summary>
+### TODO
+</details>
+
+<details>
+<summary><b>Semantic Segmentation</b></summary>
+### TODO
+</details>
+
+<details>
+<summary><b>Object Tracking</b></summary>
+### TODO
+</details>
+
 ## License
 
 BSD-3-Clause for this toolkit's code. BDD100K's own data remains governed by
