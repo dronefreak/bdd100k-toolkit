@@ -5,7 +5,6 @@
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-green)](LICENSE)
 [![Maintained](https://img.shields.io/badge/maintained-yes-brightgreen)](https://github.com/dronefreak/bdd100k-toolkit/commits)
-[![Dataset: BDD100K](https://img.shields.io/badge/dataset-BDD100K-orange)](https://www.bdd100k.com/)
 [![Backends: Ultralytics, timm](https://img.shields.io/badge/backends-Ultralytics%20%7C%20timm-informational)](#classification-backends)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff)
 
