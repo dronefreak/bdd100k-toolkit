@@ -1,5 +1,16 @@
 # BDD100K-Toolkit
 
+[![CI](https://github.com/dronefreak/bdd100k-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/dronefreak/bdd100k-toolkit/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](pyproject.toml)
+[![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-green)](LICENSE)
+[![Maintained](https://img.shields.io/badge/maintained-yes-brightgreen)](https://github.com/dronefreak/bdd100k-toolkit/commits)
+[![Dataset: BDD100K](https://img.shields.io/badge/dataset-BDD100K-orange)](https://www.bdd100k.com/)
+[![Backends: Ultralytics, timm](https://img.shields.io/badge/backends-Ultralytics%20%7C%20timm-informational)](#classification-backends)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff)
+
+![Weather, period and scenario classifiers running on a sunny day clip and a night clip](docs/assets/demo.gif)
+
 Unofficial, modern, dependency-clean toolkit for [BDD100K](https://www.bdd100k.com/) tasks.
 It currently covers the three image-attribute classification tasks (period,
 weather, scenario). Further tasks will be added here once they are done and
@@ -48,6 +59,14 @@ The label distribution is heavily imbalanced (for example 13 `foggy` and 7
 `gas stations` images in the test split), so evaluation reports per-class
 precision, recall and F1 and the macro averages, not just top-1 accuracy. See
 [`docs/data-notes.md`](docs/data-notes.md) for the real counts.
+
+## Model Zoo
+
+| Task | Model | Macro F1 | Top-1 | Balanced acc | Macro precision |
+|---|---|---|---|---|---|
+| Weather | [ConvNeXt-Atto](https://huggingface.co/dronefreak/bdd100k-weather-convnext_atto) | 67.44% | 83.00% | 65.25% | 81.38% |
+| Period (time of day) | [EfficientViT-B0](https://huggingface.co/dronefreak/bdd100k-period-efficientvit_b0) | 80.98% | 93.71% | 77.14% | 86.44% |
+| Scenario | [MobileNetV4-Conv-Small](https://huggingface.co/dronefreak/bdd100k-scenario-mobilenetv4_conv_small) | 52.89% | 78.20% | 48.69% | 61.41% |
 
 ## Data layout
 
@@ -112,10 +131,10 @@ The same three commands work for `bdd100k-period` and `bdd100k-scenario`.
 
 Two backends train the classification tasks, chosen with `model.backend`:
 
-| Backend | Models | Install |
-|---|---|---|
-| `ultralytics` (default) | `yolo11n-cls`, `yolov8s-cls`, ... | included |
-| `timm` | any of timm's ~1,300 architectures (`convnext_tiny`, `resnet50`, `efficientnet_b0`, ...) with pretrained weights | `pip install "bdd100k-toolkit[timm]"` |
+| Backend | Models | Number of models | Install |
+|---|---|---|---|
+| `ultralytics` (default) | `yolo11n-cls`, `yolov8s-cls`, ... | 15 pretrained (`yolov8`, `yolo11`, `yolo26` in n/s/m/l/x) | included |
+| `timm` | any of timm's architectures (`convnext_tiny`, `resnet50`, `efficientnet_b0`, ...) with pretrained weights | 1,351 architectures (1,807 pretrained weight sets) | `pip install "bdd100k-toolkit[timm]"` |
 
 ```bash
 bdd100k-train dataset=bdd100k-weather model.backend=timm model.name=convnext_tiny \
@@ -141,7 +160,11 @@ never redistributes BDD100K data itself.
 ## Roadmap
 
 - [ ] Add scenario/weather/period classification datasets
+  - [ ] Add demo support for images/videos
 - [ ] Add object detection dataset support
+  - [ ] Add demo support for images/videos
 - [ ] Add semantic segmentation dataset support
+  - [ ] Add demo support for images/videos
 - [ ] Add object tracking support
+  - [ ] Add demo support
 - [ ] Add ONNX/TensorRT export mechanisms

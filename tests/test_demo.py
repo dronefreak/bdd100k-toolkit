@@ -124,8 +124,53 @@ def test_missing_image_and_duplicate_task_fail_cleanly(
 ) -> None:
     models = {"period": checkpoints["period"]}
     assert _run(classify, tmp_path / "nope.jpg", tmp_path / "x.jpg", models) == 2
-    assert "Image not found" in capsys.readouterr().err
+    assert "not found" in capsys.readouterr().err
     with pytest.raises(SystemExit):
         classify.main(
             ["--image", str(frame), "--model", "period=a.pt", "--model", "period=b.pt"]
         )
+
+
+def test_folder_runs_every_image_and_skips_a_corrupt_one(
+    classify,
+    checkpoints,
+    tmp_path,  # noqa: ANN001
+) -> None:
+    folder = tmp_path / "frames"
+    folder.mkdir()
+    Image.new("RGB", (320, 180), (40, 60, 200)).save(folder / "a.png")
+    Image.new("RGB", (200, 300), (10, 10, 40)).save(folder / "b.jpeg")
+    (folder / "broken.jpg").write_bytes(b"not an image")
+    out = tmp_path / "out"
+    assert _run(classify, folder, out, {"weather": checkpoints["weather"]}) == 1
+    assert sorted(p.name for p in out.iterdir()) == ["a.jpg", "b.jpg"]
+    assert Image.open(out / "b.jpg").size == (200, 300)
+
+
+def test_video_folder_gets_an_annotated_video_per_clip(
+    classify,
+    checkpoints,
+    tmp_path,  # noqa: ANN001
+) -> None:
+    import cv2
+    import numpy as np
+
+    folder = tmp_path / "clips"
+    folder.mkdir()
+    for name in ("a.mp4", "b.mp4"):
+        writer = cv2.VideoWriter(
+            str(folder / name), cv2.VideoWriter_fourcc(*"mp4v"), 10, (160, 90)
+        )
+        for _ in range(6):
+            writer.write(np.full((90, 160, 3), 128, np.uint8))
+        writer.release()
+    (folder / "bad.mp4").write_bytes(b"not a video")
+    out = tmp_path / "out"
+    args = [
+        "--video", str(folder), "--device", "cpu", "--stride", "2",
+        "--model", f"weather={checkpoints['weather']}", "--output", str(out),
+    ]  # fmt: skip
+    assert classify.main(args) == 1
+    assert sorted(p.name for p in out.iterdir()) == ["a.mp4", "b.mp4"]
+    clip = cv2.VideoCapture(str(out / "a.mp4"))
+    assert int(clip.get(cv2.CAP_PROP_FRAME_COUNT)) == 6
