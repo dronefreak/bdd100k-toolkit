@@ -82,7 +82,7 @@ class VideoWriter:
         if self._writer is None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self._writer = cv2.VideoWriter(
-                str(self.path), cv2.VideoWriter_fourcc(*"mp4v"), self.fps, frame.size
+                str(self.path), cv2.VideoWriter.fourcc(*"mp4v"), self.fps, frame.size
             )
         self._writer.write(
             cv2.cvtColor(np.asarray(frame.convert("RGB")), cv2.COLOR_RGB2BGR)

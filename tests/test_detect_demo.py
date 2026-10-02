@@ -55,7 +55,7 @@ def test_image_folder_and_video(
     assert [p.name for p in out.iterdir()] == ["a.jpg"]
 
     clip = tmp_path / "clip.mp4"
-    writer = cv2.VideoWriter(str(clip), cv2.VideoWriter_fourcc(*"mp4v"), 10, (160, 90))
+    writer = cv2.VideoWriter(str(clip), cv2.VideoWriter.fourcc(*"mp4v"), 10, (160, 90))
     for _ in range(6):
         writer.write(np.full((90, 160, 3), 128, np.uint8))
     writer.release()
