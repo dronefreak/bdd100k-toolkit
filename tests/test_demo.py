@@ -159,7 +159,7 @@ def test_video_folder_gets_an_annotated_video_per_clip(
     folder.mkdir()
     for name in ("a.mp4", "b.mp4"):
         writer = cv2.VideoWriter(
-            str(folder / name), cv2.VideoWriter_fourcc(*"mp4v"), 10, (160, 90)
+            str(folder / name), cv2.VideoWriter.fourcc(*"mp4v"), 10, (160, 90)
         )
         for _ in range(6):
             writer.write(np.full((90, 160, 3), 128, np.uint8))
