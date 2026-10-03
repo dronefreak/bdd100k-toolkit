@@ -1,6 +1,6 @@
 # Segmentation
 
-Pixel-level labels for the 10K BDD100K images (7K train, 1K val, 2K test).
+Pixel-level labels for the 10K BDD100K images (7K train, 1K val, 2K test without public labels).
 
 | Task | Status |
 |---|---|
