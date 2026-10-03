@@ -19,27 +19,7 @@ This repository currently supports the tasks listed below. For more information 
 - [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation): planned
 - [**Object Tracking**](src/bdd100k_toolkit/tracking): planned
 
-## Quickstart
-
-```bash
-pip install -e ".[dev]"
-
-bdd100k-prepare  --dataset bdd100k-weather --raw-dir /path/to/bdd100k --output-dir /path/to/out
-bdd100k-train    dataset=bdd100k-weather model.name=yolo11n-cls dataset.data_dir=/path/to/out
-bdd100k-evaluate --dataset bdd100k-weather --checkpoint <run>/weights/best.pt --data-dir /path/to/out
-```
-
-The same three commands work for every task; `--help` lists the datasets. Each task folder has its own README with details and its model zoo.
-
-## Roadmap
-
-- [x] Classification: weather, period, scenario (with image and video demos)
-- [x] Object detection data pipeline and baselines
-- [ ] Semantic segmentation
-- [ ] Object tracking
-- [ ] ONNX/TensorRT export
-
-## Dataset
+## Datasets
 
 The official BDD100K website (bdd100k.com, bdd-data.berkeley.edu) is down and has been unreachable, so the datasets below are unofficial redistributions on Hugging Face, which the BDD100K license allows as long as the copyright notice is carried forward.
 
@@ -52,13 +32,13 @@ To use this toolkit, download the datasets from Hugging Face (all with the origi
 | Period | 🤗 [dronefreak/BDD100K-Period-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification) |
 | Scenario | 🤗 [dronefreak/BDD100K-Scenario-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification) |
 
-```bash
-hf download dronefreak/BDD100K-Weather-Classification --repo-type dataset --local-dir /path/to/weather
-bdd100k-prepare --dataset bdd100k-weather --raw-dir /path/to/weather --output-dir /path/to/out
-```
+## Roadmap
 
-`bdd100k-prepare` detects the layout itself, so a copy of the official download (images plus label JSON)
-and the Kaggle class folders work too.
+- [x] Classification: weather, period, scenario (with image and video demos)
+- [x] Object detection data pipeline and baselines
+- [ ] Semantic segmentation
+- [ ] Object tracking
+- [ ] ONNX/TensorRT export
 
 ## License
 
