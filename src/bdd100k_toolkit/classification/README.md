@@ -7,7 +7,7 @@ three Kaggle datasets (`marquis03`, Apache-2.0), which are the same images and l
 the official release, with `unknown` being the official `undefined`. The labels are the 2018
 `attributes` in `bdd100k_labels_images_{train,val}.json`.
 
-![BDD100K detector and weather, period and scenario classifiers running on two city drives, side by side](../../../docs/assets/demo.gif)
+![BDD100K detector and weather, period and scenario classifiers running on two city drives, side by side](../../../assets/demo.gif)
 
 | Task | Classes | Source |
 |---|---|---|
