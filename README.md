@@ -27,7 +27,7 @@ To use this toolkit, download the datasets from Hugging Face (all with the origi
 
 | Task | Dataset |
 |---|---|
-| Detection | 🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) (YOLO format with a `data.yaml`, see the [detection README](src/bdd100k_toolkit/detection) for the one-line path fix) |
+| Detection | 🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) |
 | Weather | 🤗 [dronefreak/BDD100K-Weather-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Weather-Classification) |
 | Period | 🤗 [dronefreak/BDD100K-Period-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification) |
 | Scenario | 🤗 [dronefreak/BDD100K-Scenario-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification) |
