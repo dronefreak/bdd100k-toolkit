@@ -8,7 +8,7 @@
 [![Backends: Ultralytics, timm](https://img.shields.io/badge/backends-Ultralytics%20%7C%20timm-informational)](src/bdd100k_toolkit/classification)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff)
 
-![BDD100K detector and weather, period and scenario classifiers running on two city drives, side by side](docs/assets/demo.gif)
+![BDD100K detector and weather, period and scenario classifiers running on two city drives, side by side](assets/demo.gif)
 
 An unofficial, modern toolkit for the [BDD100K dataset](https://arxiv.org/abs/1805.04687). It prepares the data, trains and evaluates models with current libraries (PyTorch, Ultralytics, timm, Hydra), and renders demos on images and videos. The official [toolkit](https://github.com/bdd100k/bdd100k) and [model zoo](https://github.com/SysCV/bdd100k-models) are unmaintained and no longer install cleanly, so this project rebuilds the parts that matter, one task at a time, each checked on real data. The goal is a set of reproducible baselines for others to build on.
 

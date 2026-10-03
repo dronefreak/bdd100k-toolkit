@@ -1,8 +1,7 @@
 """
 YOLO detection training via the Ultralytics engine.
 
-Ported from DetectionBench's ``utils/trainer.py`` (``YOLOTrainer``), trimmed
-to this project's YOLO-only scope, with no RF-DETR dispatch. Delegates training
+Delegates training
 to Ultralytics' native trainer, which implements the full YOLO training
 pipeline (TaskAlignedAssigner, DFL loss, box/cls/dfl losses, etc.).
 """
