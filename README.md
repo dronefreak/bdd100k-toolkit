@@ -14,8 +14,8 @@ An unofficial, modern toolkit for the [BDD100K dataset](https://arxiv.org/abs/18
 
 This repository currently supports the tasks listed below. For more information about each task, please click on the individual task's name.
 
-- [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks)
-- [**Object Detection**](src/bdd100k_toolkit/detection): 10 classes, YOLO models
+- [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks), 22 models
+- [**Object Detection**](src/bdd100k_toolkit/detection): 10 classes, 10 models (9 YOLO, 1 RF-DETR)
 - [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation): planned
 - [**Object Tracking**](src/bdd100k_toolkit/tracking): planned
 
@@ -47,10 +47,10 @@ To use this toolkit, download the datasets from Hugging Face (all with the origi
 
 | Task | Dataset |
 |---|---|
-| Detection | [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) (YOLO format with a `data.yaml`, see the [detection README](src/bdd100k_toolkit/detection) for the one-line path fix) |
-| Weather | [dronefreak/BDD100K-Weather-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Weather-Classification) |
-| Period | [dronefreak/BDD100K-Period-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification) |
-| Scenario | [dronefreak/BDD100K-Scenario-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification) |
+| Detection | 🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) (YOLO format with a `data.yaml`, see the [detection README](src/bdd100k_toolkit/detection) for the one-line path fix) |
+| Weather | 🤗 [dronefreak/BDD100K-Weather-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Weather-Classification) |
+| Period | 🤗 [dronefreak/BDD100K-Period-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification) |
+| Scenario | 🤗 [dronefreak/BDD100K-Scenario-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification) |
 
 ```bash
 hf download dronefreak/BDD100K-Weather-Classification --repo-type dataset --local-dir /path/to/weather

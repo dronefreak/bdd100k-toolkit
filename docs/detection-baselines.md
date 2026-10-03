@@ -2,18 +2,19 @@
 
 Nine Ultralytics YOLO models trained earlier in DetectionBench, evaluated here with
 this toolkit's own pipeline (`bdd100k-prepare`, `bdd100k-coco-to-yolo`,
-`bdd100k-evaluate`) on the test split (the official 10,000-image val set).
+`bdd100k-evaluate`) on the official 10,000-image val set. BDD100K has no labelled test
+split, so the prepared folders store these images under the name `test`.
 
 ## Reproduction check
 
 Our evaluator reproduces DetectionBench's reported numbers: across all nine models the
 largest difference in mAP@0.5 or mAP@0.5:0.95 is 0.00004 (precision and recall differ
 by at most 0.002). So the prepared data, the YOLO bridge and the evaluation here match
-what those models were trained and scored on. The test images are identical in both
+what those models were trained and scored on. The val images are identical in both
 projects; the train/valid holdout differs (random shuffle there, sorted-name holdout
-here), which does not affect test scores.
+here), which does not affect the val scores.
 
-## Results (test split, 10,000 images, imgsz 960)
+## Results (official val set, 10,000 images, imgsz 960)
 
 | model | mAP@0.5:0.95 | mAP@0.5 | precision | recall |
 |---|---:|---:|---:|---:|
@@ -49,7 +50,7 @@ only (59,384 images).
 
 Checkpoints and logs live in DetectionBench under `experiments/bdd100k/<model>/`.
 Hugging Face model cards exist for all of them, under `dronefreak/bdd100k-<model>`
-(collection: <https://huggingface.co/collections/dronefreak/bdd100k-object-detection-model-zoo>),
+(collection: 🤗 <https://huggingface.co/collections/dronefreak/bdd100k-object-detection-model-zoo>),
 including RF-DETR Nano (mAP@0.5 56.9, mAP@0.5:0.95 31.58, as reported in DetectionBench).
 The RF-DETR run is not re-evaluated here because this toolkit has no RF-DETR backend.
 
@@ -58,7 +59,7 @@ The RF-DETR run is not re-evaluated here because this toolkit has no RF-DETR bac
 - Size matters, family barely does: the four `s` models land at 0.331 to 0.339, the
   five nano-size models at 0.291 to 0.295. YOLO26s is best, and the spread inside
   each size class is smaller than the gap between classes.
-- Rare and small classes are the weak spot. `train` has about 0.001 AP (15 test
+- Rare and small classes are the weak spot. `train` has about 0.001 AP (15 val
   boxes, 113 training boxes); `traffic light` (0.28) and `traffic sign` (0.41) trail
   `car` (0.52), `bus` and `truck` (about 0.5). Together lights and signs are a third
   of all boxes and are mostly tiny.
@@ -68,7 +69,7 @@ The RF-DETR run is not re-evaluated here because this toolkit has no RF-DETR bac
 ## Comparing with the old official zoo
 
 `docs/reference-bdd100k-models.md` lists Box AP of 29.8 to 31.9 (Faster R-CNN R-50-FPN)
-and 35.4 (best, ConvNeXt-S) on test. Our 29.1 to 33.9 is in the same range, but the
+and 35.4 (best, ConvNeXt-S) on that zoo's test split. Our 29.1 to 33.9 on val is in the same range, but the
 metrics are not identical: Ultralytics' COCO-style mAP here, against the official
 BDD evaluation (with ignore regions) there. Treat the comparison as a rough
 reference until the Phase 3 evaluator exists.
