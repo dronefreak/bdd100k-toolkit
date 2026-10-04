@@ -64,6 +64,17 @@ _CLASSES = [
     "bicycle",
 ]
 
+# The 7 Cityscapes categories (cityscapesscripts ``labels.py``), used for category IoU.
+_CATEGORIES = {
+    "flat": ["road", "sidewalk"],
+    "construction": ["building", "wall", "fence"],
+    "object": ["pole", "traffic light", "traffic sign"],
+    "nature": ["vegetation", "terrain"],
+    "sky": ["sky"],
+    "human": ["person", "rider"],
+    "vehicle": ["car", "truck", "bus", "train", "motorcycle", "bicycle"],
+}
+
 _VAL_FRACTION = 0.15
 _SPLIT_SEED = 42
 
@@ -76,6 +87,7 @@ class BDD100KSemanticSegAdapter(SemanticSegAdapter):
         key="bdd100k-semantic-seg",
         display_name="BDD100K Semantic Segmentation",
         classes=_CLASSES,
+        categories=_CATEGORIES,
         description=(
             "BDD100K's semantic segmentation task: 8,000 labelled 1280x720 "
             "images (7,000 train + 1,000 val, drawn from the separate 10K "

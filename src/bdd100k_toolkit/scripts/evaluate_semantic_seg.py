@@ -1,7 +1,9 @@
 r"""
 `bdd100k-evaluate`: evaluate a trained segmentation model.
 
-Computes per-class IoU and mIoU on the canonical ``test`` split.
+Computes per-class IoU and mIoU on the canonical ``test`` split. With ``--hf-model``
+it scores a pretrained Hugging Face model instead (see
+``evaluate_semantic_seg_pretrained``).
 
 Usage:
   bdd100k-evaluate --checkpoint <run>/model.pt \
@@ -14,11 +16,13 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
 import torch
 
+from bdd100k_toolkit.cli import find_option
 from bdd100k_toolkit.segmentation.semantic import get_spec, list_datasets
 from bdd100k_toolkit.segmentation.semantic.trainer import ImageMaskDataset
 from bdd100k_toolkit.utils.console import RichConsoleManager
@@ -59,6 +63,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Run semantic segmentation evaluation and print/save per-class IoU + mIoU."""
+    if find_option(sys.argv[1:], "--hf-model") is not None:
+        from bdd100k_toolkit.scripts import evaluate_semantic_seg_pretrained
+
+        evaluate_semantic_seg_pretrained.main()
+        return
     import segmentation_models_pytorch as smp
     from torch.utils.data import DataLoader
 
