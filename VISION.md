@@ -46,9 +46,8 @@ dependency tree can clone this repo and get a working adapter immediately.
    encodings precisely. Nothing is ever `import`ed from it or `scalabel`.
    Every format (JSON box2d, RGBA instance/panoptic bitmasks, plain
    per-pixel semantic masks) is parsed with plain Python/numpy/Pillow code
-   written in this repo. A review of that toolkit (its spec facts and the
-   bugs we must not repeat) lives in
-   [`docs/official-toolkit-review.md`](docs/official-toolkit-review.md).
+   written in this repo. The official toolkit was reviewed up front for its
+   spec facts and the bugs we must not repeat.
 
 2. **Adapter pattern, one per task.** Each task package
    (`classification/`, `detection/`, `segmentation/semantic/`, ...) exposes

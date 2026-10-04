@@ -18,9 +18,9 @@ RFDETR_CLASSES = {
 
 
 def normalize_model_name(model_name: str) -> str:
-    """Map aliases such as ``nano`` or ``rfdetr_nano`` to ``rfdetr-nano``."""
-    name = model_name.strip().lower().replace("_", "-")
-    return name if name.startswith("rfdetr") else f"rfdetr-{name}"
+    """Map ``nano``, ``rfdetr_nano`` or ``RFDETRNano`` to ``rfdetr-nano``."""
+    size = model_name.strip().lower().removeprefix("rfdetr").strip("-_ ")
+    return f"rfdetr-{size}"
 
 
 def is_rfdetr(model_name: str | None) -> bool:
@@ -43,19 +43,31 @@ def load_model_class(model_name: str) -> type[Any]:
     return getattr(rfdetr, RFDETR_CLASSES[canonical])  # type: ignore[no-any-return]
 
 
-def read_training_resolution(checkpoint_path: str | Path | None) -> int | None:
+def read_training_config(checkpoint_path: str | Path | None) -> dict[str, Any] | None:
     """
-    Return the resolution a checkpoint was trained at, if recorded.
+    Return the ``training_config.json`` RF-DETR wrote beside a checkpoint, if any.
 
-    RF-DETR checkpoints do not store it, but training writes
-    ``training_config.json`` (``model_config.resolution``) beside them.
+    Checkpoints do not record the resolution, class names or model family, but
+    this file does (``model_config.resolution``, ``model_config.model_name``,
+    ``class_names``, ``num_classes``).
     """
     if not checkpoint_path:
         return None
-    config_path = Path(checkpoint_path).parent / "training_config.json"
     try:
-        resolution = json.loads(config_path.read_text())["model_config"]["resolution"]
-    except (OSError, KeyError, TypeError, ValueError):
+        config = json.loads(
+            (Path(checkpoint_path).parent / "training_config.json").read_text()
+        )
+    except (OSError, ValueError):
+        return None
+    return config if isinstance(config, dict) else None
+
+
+def read_training_resolution(checkpoint_path: str | Path | None) -> int | None:
+    """Return the resolution a checkpoint was trained at, if recorded."""
+    config = read_training_config(checkpoint_path)
+    try:
+        resolution = config["model_config"]["resolution"]  # type: ignore[index]
+    except (KeyError, TypeError):
         return None
     return int(resolution) if resolution is not None else None
 

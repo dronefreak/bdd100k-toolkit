@@ -67,7 +67,7 @@ segmentation = [
 ]
 # Extra detection backend: RF-DETR (training and evaluation).
 rfdetr = [
-    "rfdetr[train,loggers,augment]>=1.0.0",
+    "rfdetr[train,loggers,augment]>=1.9.0,<2",
     "supervision>=0.25.0",
 ]
 # Extra classification backend: any of timm's ~1,300 architectures.

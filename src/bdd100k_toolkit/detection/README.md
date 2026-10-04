@@ -17,23 +17,23 @@ YOLO models: COCO-pretrained, 50 epochs, SGD, cosine schedule, seed 0.
 
 ### YOLO
 
-| Model | mAP@0.5:0.95 | mAP@0.5 | Weights | Citation |
-|---|---|---|---|---|
-| YOLO26s | 33.86 | 58.76 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo26s) | [YOLO26](CITATIONS.md#yolo26) |
-| YOLOv10s | 33.35 | 57.64 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov10s) | [YOLOv10](CITATIONS.md#yolov10) |
-| YOLOv8s | 33.25 | 57.93 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov8s) | [YOLOv8](CITATIONS.md#yolov8) |
-| YOLO11s | 33.10 | 57.63 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo11s) | [YOLO11](CITATIONS.md#yolo11) |
-| YOLOv9t | 29.46 | 52.04 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov9t) | [YOLOv9](CITATIONS.md#yolov9) |
-| YOLOv10n | 29.31 | 51.96 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov10n) | [YOLOv10](CITATIONS.md#yolov10) |
-| YOLO26n | 29.23 | 52.25 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo26n) | [YOLO26](CITATIONS.md#yolo26) |
-| YOLOv8n | 29.09 | 51.67 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov8n) | [YOLOv8](CITATIONS.md#yolov8) |
-| YOLO11n | 29.07 | 51.63 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo11n) | [YOLO11](CITATIONS.md#yolo11) |
+| Model | mAP@0.5:0.95 | mAP@0.5 | Weights |
+|---|---|---|---|
+| [YOLO26s, 2026](CITATIONS.md#yolo26) | 33.86 | 58.76 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo26s) |
+| [YOLOv10s, 2024](CITATIONS.md#yolov10) | 33.35 | 57.64 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov10s) |
+| [YOLOv8s, 2023](CITATIONS.md#yolov8) | 33.25 | 57.93 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov8s) |
+| [YOLO11s, 2024](CITATIONS.md#yolo11) | 33.10 | 57.63 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo11s) |
+| [YOLOv9t, 2024](CITATIONS.md#yolov9) | 29.46 | 52.04 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov9t) |
+| [YOLOv10n, 2024](CITATIONS.md#yolov10) | 29.31 | 51.96 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov10n) |
+| [YOLO26n, 2026](CITATIONS.md#yolo26) | 29.23 | 52.25 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo26n) |
+| [YOLOv8n, 2023](CITATIONS.md#yolov8) | 29.09 | 51.67 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolov8n) |
+| [YOLO11n, 2024](CITATIONS.md#yolo11) | 29.07 | 51.63 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-yolo11n) |
 
 ### RF-DETR
 
-| Model | mAP@0.5:0.95 | mAP@0.5 | Weights | Citation |
-|---|---|---|---|---|
-| RF-DETR Nano | 31.58 | 56.90 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-rfdetr-nano) | [RF-DETR](CITATIONS.md#rf-detr) |
+| Model | mAP@0.5:0.95 | mAP@0.5 | Weights |
+|---|---|---|---|
+| [RF-DETR Nano, 2026](CITATIONS.md#rf-detr) | 31.58 | 56.90 | 🤗 [HuggingFace](https://huggingface.co/dronefreak/bdd100k-rfdetr-nano) |
 
 All weights: the 🤗 [BDD100K object detection model zoo](https://huggingface.co/collections/dronefreak/bdd100k-object-detection-model-zoo) collection on Hugging Face.
 
@@ -130,7 +130,8 @@ python demo/detect.py --video /path/to/clip.mp4 \
 ```
 
 Images, folders of images, videos and folders of videos are all accepted; outputs go to
-`demo/outputs/`.
+`demo/outputs/`. `--model` also takes an RF-DETR `checkpoint_best_total.pth` (with its
+`training_config.json` beside it, and the `rfdetr` extra installed).
 
 ### Official download instead of the Hugging Face copy
 

@@ -2,6 +2,8 @@
 r"""
 Detect objects in images or videos with a trained BDD100K detector and draw the boxes.
 
+Works with Ultralytics checkpoints (best.pt) and RF-DETR ones (.pth).
+
   python demo/detect.py --image frame.jpg \
       --model experiments/bdd100k-detection/yolo26s/yolo26s/weights/best.pt
 
@@ -39,7 +41,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--image", help="Image file or folder of images")
     source.add_argument("--video", help="Video file or folder of videos")
-    add("--model", required=True, help="Detection checkpoint (best.pt)")
+    add(
+        "--model", required=True, help="Detection checkpoint (best.pt, or RF-DETR .pth)"
+    )
     add("--device", default="auto", help="cuda / cpu / auto")
     add("--conf", type=float, default=0.25, help="Minimum box score")
     add("--iou", type=float, default=0.7, help="NMS IoU threshold")
@@ -122,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         detector = Detector(
             args.model, args.device, conf=args.conf, iou=args.iou, imgsz=args.imgsz
         )
-    except (FileNotFoundError, ValueError) as err:
+    except (FileNotFoundError, ImportError, ValueError) as err:
         Console(stderr=True).print(f"[red]error:[/red] {err}")
         return 2
 

@@ -24,7 +24,7 @@ has the same shape: `base.py` (spec + abstract adapter), `registry.py`,
 `trainer.py`. To add a dataset, write one adapter and register it with
 `@register`; trainers and CLIs don't change.
 
-Rules every adapter follows (see `docs/official-toolkit-review.md`):
+Rules every adapter follows (the official toolkit silently gets these wrong):
 
 - Read released masks/labels directly; never round-trip ids through colour
   channels or floats.

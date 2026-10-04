@@ -2,7 +2,7 @@
 Loud-failure helpers shared by every adapter.
 
 The official BDD100K toolkit silently produces wrong or empty output in
-several places (see ``docs/official-toolkit-review.md``). Adapters here follow
+several places. Adapters here follow
 one rule instead: a split that comes out empty is an error, and anything
 dropped along the way is counted and reported, never skipped silently.
 """

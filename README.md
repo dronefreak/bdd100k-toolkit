@@ -14,10 +14,12 @@ An unofficial, modern toolkit for the [BDD100K dataset](https://arxiv.org/abs/18
 
 This repository currently supports the tasks listed below. For more information about each task, please click on the individual task's name.
 
-- [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks), 37 models available in the model zoo (1300+ architectures in `timm` and 12+ in `ultralytics`)
-- [**Object Detection**](src/bdd100k_toolkit/detection): 10 classes, 10 models available in the model zoo (30+ architecures in `ultralytics` and 5+ in `rfdetr`)
-- [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation): in progress
-- [**Object Tracking**](src/bdd100k_toolkit/tracking): planned
+| Task | Covers | Model zoo | Trainable architectures |
+|---|---|---|---|
+| [**Image Classification**](src/bdd100k_toolkit/classification) | weather, time of day and scenario (unofficial tasks) | 37 models | 1300+ in `timm`, 12+ in `ultralytics` |
+| [**Object Detection**](src/bdd100k_toolkit/detection) | 10 classes | 10 models | 30+ in `ultralytics`, 5+ in `rfdetr` |
+| [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation) | 19 classes | in progress | |
+| [**Object Tracking**](src/bdd100k_toolkit/tracking) | | planned | |
 
 ## Datasets
 
@@ -27,10 +29,11 @@ To use this toolkit, download the datasets from Hugging Face (all with the origi
 
 | Task | Dataset |
 |---|---|
-| Detection | 🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) |
-| Weather | 🤗 [dronefreak/BDD100K-Weather-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Weather-Classification) |
-| Period | 🤗 [dronefreak/BDD100K-Period-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification) |
-| Scenario | 🤗 [dronefreak/BDD100K-Scenario-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification) |
+| Object Detection | 🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) |
+| Weather Classification | 🤗 [dronefreak/BDD100K-Weather-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Weather-Classification) |
+| Period Classification | 🤗 [dronefreak/BDD100K-Period-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Period-Classification) |
+| Scenario Classification | 🤗 [dronefreak/BDD100K-Scenario-Classification](https://huggingface.co/datasets/dronefreak/BDD100K-Scenario-Classification) |
+| Semantic Segmentation | 🤗 [dronefreak/BDD100K-Semantic-Segmentation](https://huggingface.co/datasets/dronefreak/BDD100K-Semantic-Segmentation) |
 
 ## Roadmap
 

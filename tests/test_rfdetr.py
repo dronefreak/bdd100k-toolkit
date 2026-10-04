@@ -27,6 +27,8 @@ def _cfg(*overrides: str):
 def test_model_name_aliases() -> None:
     assert normalize_model_name("Nano") == "rfdetr-nano"
     assert normalize_model_name("rfdetr_small") == "rfdetr-small"
+    assert normalize_model_name("RFDETRNano") == "rfdetr-nano"
+    assert normalize_model_name("rfdetr-medium") == "rfdetr-medium"
     assert is_rfdetr("rfdetr-medium")
     assert not is_rfdetr("yolo11n")
     assert not is_rfdetr(None)
@@ -58,3 +60,58 @@ def test_unknown_model_is_rejected() -> None:
 
     with pytest.raises(ValueError, match="Unsupported RF-DETR model"):
         load_model_class("rfdetr-huge")
+
+
+def test_detector_runs_an_rfdetr_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import numpy as np
+    from bdd100k_toolkit.detection import predict
+    from PIL import Image
+
+    class FakeModel:
+        def __init__(self, **kwargs: object) -> None:
+            self.kwargs = kwargs
+
+        def predict(self, image: Image.Image, threshold: float, **_: object):
+            assert threshold == 0.4
+            return type(
+                "Found",
+                (),
+                {
+                    "xyxy": np.array([[1.0, 2.0, 30.0, 40.0]]),
+                    "confidence": np.array([0.9]),
+                    "class_id": np.array([2]),
+                },
+            )()
+
+    seen: dict[str, str] = {}
+
+    def fake_loader(name: str) -> type[FakeModel]:
+        seen["name"] = name
+        return FakeModel
+
+    monkeypatch.setattr(
+        "bdd100k_toolkit.detection.rfdetr.load_model_class", fake_loader
+    )
+    run = tmp_path / "rfdetr-nano"
+    run.mkdir()
+    checkpoint = run / "checkpoint_best_total.pth"
+    checkpoint.write_bytes(b"x")
+    with pytest.raises(ValueError, match="training_config.json"):
+        predict.Detector(checkpoint, "cpu")
+    (run / "training_config.json").write_text(
+        json.dumps(
+            {
+                "class_names": ["person", "rider", "car"],
+                "num_classes": 3,
+                "model_config": {"model_name": "RFDETRNano", "resolution": 576},
+            }
+        )
+    )
+    detector = predict.Detector(checkpoint, "cpu", conf=0.4)
+    found = detector.predict(Image.new("RGB", (64, 64)))
+    assert seen["name"] == "RFDETRNano"
+    assert detector.model_name == "rfdetr-nano"
+    assert found.boxes == [(1.0, 2.0, 30.0, 40.0)]
+    assert found.counts() == {"car": 1}
