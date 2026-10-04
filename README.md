@@ -14,8 +14,8 @@ An unofficial, modern toolkit for the [BDD100K dataset](https://arxiv.org/abs/18
 
 This repository currently supports the tasks listed below. For more information about each task, please click on the individual task's name.
 
-- [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks), 37 models
-- [**Object Detection**](src/bdd100k_toolkit/detection): 10 classes, 10 models (9 YOLO, 1 RF-DETR)
+- [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks), 37 models available in the model zoo (1300+ architectures in `timm` and 12+ in `ultralytics`)
+- [**Object Detection**](src/bdd100k_toolkit/detection): 10 classes, 10 models available in the model zoo (30+ architecures in `ultralytics` and 5+ in `rfdetr`)
 - [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation): in progress
 - [**Object Tracking**](src/bdd100k_toolkit/tracking): planned
 
@@ -60,3 +60,11 @@ To cite the BDD100K dataset in your paper,
     year = {2020}
 }
 ```
+
+## References
+
+- [BDD100K toolkit](https://github.com/bdd100k/bdd100k): the original toolkit
+- [BDD100K model zoo](https://github.com/SysCV/bdd100k-models): the original model zoo
+- [timm](https://github.com/huggingface/pytorch-image-models): classification backend
+- [Ultralytics](https://github.com/ultralytics/ultralytics): YOLO classification and detection backend
+- [RF-DETR](https://github.com/roboflow/rf-detr): transformer detection backend
