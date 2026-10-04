@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,9 @@ from typing import Any
 import torch
 from rich.table import Table
 
+from bdd100k_toolkit.cli import find_option
 from bdd100k_toolkit.detection import get_spec, list_datasets
+from bdd100k_toolkit.detection.rfdetr import is_rfdetr
 from bdd100k_toolkit.utils.console import RichConsoleManager
 
 
@@ -187,7 +190,12 @@ def finalize_metrics(
 
 
 def main() -> None:
-    """Run the detection evaluation CLI entrypoint."""
+    """Run the detection evaluation CLI entrypoint (RF-DETR via ``--model``)."""
+    if is_rfdetr(find_option(sys.argv[1:], "--model")):
+        from bdd100k_toolkit.scripts import evaluate_detection_rfdetr
+
+        evaluate_detection_rfdetr.main()
+        return
     args = parse_args()
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

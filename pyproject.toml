@@ -65,6 +65,11 @@ dev = [
 segmentation = [
     "segmentation-models-pytorch>=0.3.0",
 ]
+# Extra detection backend: RF-DETR (training and evaluation).
+rfdetr = [
+    "rfdetr[train,loggers,augment]>=1.0.0",
+    "supervision>=0.25.0",
+]
 # Extra classification backend: any of timm's ~1,300 architectures.
 timm = [
     "timm>=1.0.0",

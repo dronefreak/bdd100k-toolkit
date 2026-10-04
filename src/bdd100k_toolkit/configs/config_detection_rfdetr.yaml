@@ -1,0 +1,55 @@
+# Base Hydra config for `bdd100k-train model.name=rfdetr-*` (RF-DETR detection).
+#
+#   bdd100k-train dataset=bdd100k-detection model.name=rfdetr-nano \
+#       model.resolution=576 dataset.dataset_dir=<canonical_coco_out>
+#
+# Needs: pip install "bdd100k-toolkit[rfdetr]". The data is the canonical COCO
+# layout written by `bdd100k-prepare` ({train,valid,test}/_annotations.coco.json).
+
+defaults:
+  - dataset: bdd100k-detection
+  - _self_
+
+model:
+  name: rfdetr-nano  # rfdetr-nano | rfdetr-small | rfdetr-medium | rfdetr-large
+  num_classes: ${dataset.num_classes}
+  pretrain_weights: null  # null = RF-DETR's COCO-pretrained default
+  # RF-DETR squares the whole 1280x720 frame to resolution x resolution. The family
+  # defaults (nano 384, small 512, medium 576) shrink the median 29 px box to
+  # 11 to 17 px, so use 576 / 640 / 704 for nano / small / medium (multiples of 64).
+  resolution: 576
+
+# A reasoned starting point for BDD100K (not a tuned result): 59k train images,
+# about 3,700 steps per epoch at an effective batch of 16.
+training:
+  dataset_dir: ${dataset.dataset_dir}
+  dataset_file: roboflow  # train/valid/test folders with COCO JSON
+  output_dir: experiments/${dataset.name}/${model.name}
+  epochs: 30
+  batch_size: auto  # RF-DETR picks a batch that fits and accumulates to about 16
+  grad_accum_steps: 4  # only used with a fixed batch_size
+  learning_rate: 0.0001
+  learning_rate_encoder: 0.00015
+  scheduler_type: cosine  # "step" never fires in runs shorter than 100 epochs
+  warmup_epochs: 0.25
+  checkpoint_interval: 10
+  eval_interval: 1
+  workers: 8
+  weight_decay: 0.0001
+  use_ema: true
+  amp_dtype: auto  # auto | bf16 | fp16
+  tensorboard: true
+  wandb: false
+  early_stopping: true
+  early_stopping_patience: 8
+  early_stopping_min_delta: 0.001
+  progress_bar: tqdm  # "rich" draws nothing when piped through tee
+  augmentation_backend: gpu  # cpu | auto | gpu
+  device: auto  # auto = cuda if available, else cpu
+  seed: 42
+  resume: null  # checkpoint path, or "last"
+  run_test: false
+
+evaluation:
+  dataset_dir: ${dataset.dataset_dir}
+  split: ${dataset.eval_split}

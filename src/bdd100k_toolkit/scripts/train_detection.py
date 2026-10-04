@@ -3,7 +3,8 @@ r"""
 
 Trains the configured YOLO model then evaluates the best checkpoint,
 mirroring DetectionBench's ``scripts/train_yolo.py`` (trimmed to this
-project's YOLO-only scope, with no RF-DETR dispatch).
+project's scope; ``model.name=rfdetr-*`` is handed to
+``train_detection_rfdetr``.
 
 Usage:
   bdd100k-train dataset=bdd100k-detection model.name=yolo11n
@@ -12,13 +13,16 @@ Usage:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
+from bdd100k_toolkit.cli import find_option
 from bdd100k_toolkit.detection import get_spec
+from bdd100k_toolkit.detection.rfdetr import is_rfdetr
 from bdd100k_toolkit.detection.trainer import YOLODetectionTrainer
 from bdd100k_toolkit.scripts.evaluate_detection import (
     EvaluationOptions,
@@ -96,7 +100,12 @@ def train_and_evaluate(cfg: DictConfig) -> None:
 
 
 def main() -> None:
-    """Run the training CLI entrypoint."""
+    """Run the training CLI entrypoint (RF-DETR when ``model.name`` names one)."""
+    if is_rfdetr(find_option(sys.argv[1:], "model.name")):
+        from bdd100k_toolkit.scripts import train_detection_rfdetr
+
+        train_detection_rfdetr.main()
+        return
     train_and_evaluate()
 
 

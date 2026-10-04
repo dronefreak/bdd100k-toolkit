@@ -96,7 +96,7 @@ dependency tree can clone this repo and get a working adapter immediately.
 |---|---|---|
 | Period / weather / scenario classification | ✅ done | derived from native `attributes.*`, no extra download |
 | Object detection | ✅ done | 10 classes, COCO→YOLO bridge, verified end-to-end |
-| Semantic segmentation | ✅ done | 19 classes, image+mask pairs, mIoU eval, verified end-to-end |
+| Semantic segmentation | 🚧 code in place | 19 classes, image+mask pairs, mIoU eval; tested on fixtures only, real-data run still open |
 | Instance segmentation | planned | bitmask decoder already built (`utils/bitmask.py`), 8-class subset identified, adapter/trainer not yet written |
 | Panoptic segmentation | planned | format researched, no code yet |
 | Multi-object tracking | planned | label availability itself is uncertain (bdd100k/bdd100k#369) |
@@ -112,6 +112,5 @@ exact resume points.
   notice carried forward; commercial use needs permission). The code only
   transforms a user's own local download; a YOLO-format detection copy with the
   2018 labels is hosted separately at `dronefreak/BDD100K` on Hugging Face.
-- **No `git add`/`git commit` without being explicitly asked**: this
-  repo intentionally has no git history yet; commits happen only on
-  explicit instruction.
+- **No `git add`/`git commit` without being explicitly asked**: commits
+  happen only on explicit instruction.

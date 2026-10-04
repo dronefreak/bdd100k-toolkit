@@ -8,9 +8,11 @@
 #   bdd100k-coco-to-yolo \
 #       --input-dir <canonical_coco_out> --output-dir <yolo_out>
 #
-# `dataset_yaml` is required and has no default (Hydra `???`): pass it on the command
-# line, e.g. `dataset.dataset_yaml=/path/to/...`.
+# `dataset_yaml` (YOLO) and `dataset_dir` (RF-DETR) are required only by the model that
+# uses them and have no default (Hydra `???`): pass them on the command line, e.g.
+# `dataset.dataset_yaml=/path/to/...`.
 name: bdd100k-detection
-dataset_yaml: ???
+dataset_yaml: ???  # YOLO data.yaml (YOLO models)
+dataset_dir: ???  # canonical COCO root (RF-DETR models)
 num_classes: 10
 eval_split: test

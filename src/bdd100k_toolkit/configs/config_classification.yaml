@@ -16,7 +16,7 @@ model:
 
 training:
   epochs: 50
-  batch_size: 64
+  batch_size: 32
   lr: null  # null = backend default (ultralytics 0.001, timm 3e-4)
   imgsz: 224
   workers: 4
