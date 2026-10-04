@@ -37,7 +37,9 @@ To use this toolkit, download the datasets from Hugging Face (all with the origi
 - [x] Classification: weather, period, scenario (with image and video demos)
 - [x] Object detection data pipeline and baselines
 - [ ] Semantic segmentation
-- [ ] Object tracking
+- [ ] Instance segmentation
+- [ ] Panoptic segmentation
+- [ ] Object tracking (MOT)
 - [ ] ONNX/TensorRT export
 
 ## License
