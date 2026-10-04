@@ -82,6 +82,24 @@ metrics are in `evaluation/metrics.json`. Any other model in the table works by 
 Other Ultralytics training arguments go through `+training.extra.<key>=<value>`
 (for example `+training.extra.fraction=0.1` for a quick check on 10% of the data).
 
+### Train RF-DETR
+
+RF-DETR needs the extra (`pip install "bdd100k-toolkit[rfdetr]"`) and reads the COCO folder written by
+`bdd100k-prepare` instead of the YOLO `data.yaml`. The same command dispatches on `model.name`
+(`rfdetr-nano`, `rfdetr-small`, `rfdetr-medium`). RF-DETR squares the whole frame, so the resolution
+matters: the nano baseline used 576 (small 640, medium 704), a multiple of 64.
+
+```bash
+bdd100k-train dataset=bdd100k-detection model.name=rfdetr-nano model.resolution=576 \
+    dataset.dataset_dir=/path/to/bdd100k/coco_dataset \
+    training.output_dir=experiments/bdd100k-detection/rfdetr-nano
+```
+
+Defaults (30 epochs, cosine, EMA, early stopping) are in `configs/config_detection_rfdetr.yaml`.
+Training does not evaluate; use the evaluate command below. The checkpoint is
+`checkpoint_best_total.pth`, and the resolution is read back from `training_config.json` beside it.
+For a quick GPU check add `training.epochs=2 training.batch_size=4` on a small COCO subset.
+
 ### Evaluate
 
 `--split test` selects the folder holding the official val images.
@@ -91,6 +109,15 @@ bdd100k-evaluate --dataset bdd100k-detection --model yolo26s \
     --checkpoint experiments/bdd100k-detection/yolo26s/yolo26s/weights/best.pt \
     --dataset-yaml /path/to/bdd100k/data/data.yaml --split test \
     --output-dir experiments/bdd100k-detection/yolo26s/evaluation
+```
+
+For RF-DETR, pass the COCO folder instead of `--dataset-yaml`
+(`--limit N` scores only the first N images):
+
+```bash
+bdd100k-evaluate --dataset bdd100k-detection --model rfdetr-nano \
+    --checkpoint experiments/bdd100k-detection/rfdetr-nano/checkpoint_best_total.pth \
+    --dataset-dir /path/to/bdd100k/coco_dataset --split test
 ```
 
 ### Demo

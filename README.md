@@ -14,9 +14,9 @@ An unofficial, modern toolkit for the [BDD100K dataset](https://arxiv.org/abs/18
 
 This repository currently supports the tasks listed below. For more information about each task, please click on the individual task's name.
 
-- [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks), 22 models
+- [**Image Classification**](src/bdd100k_toolkit/classification): weather, time of day and scenario (unofficial tasks), 37 models
 - [**Object Detection**](src/bdd100k_toolkit/detection): 10 classes, 10 models (9 YOLO, 1 RF-DETR)
-- [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation): planned
+- [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation): in progress
 - [**Object Tracking**](src/bdd100k_toolkit/tracking): planned
 
 ## Datasets

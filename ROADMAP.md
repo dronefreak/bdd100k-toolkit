@@ -72,7 +72,8 @@ Each task: adapter, canonical format, trainer, evaluator, `validate/stats/visual
 
 - [x] Classification: `timm` backend, EMA, early stopping, macro-F1 best checkpoint, class balancing
 - [ ] One `ModelSpec` and `Trainer` protocol per task so `model.name=` selects any backend
-- [ ] Detection: RF-DETR, torchvision models
+- [x] Detection: RF-DETR train and evaluate (nano reproduces 31.58 / 56.90 on the val set)
+- [ ] Detection: torchvision models
 - [ ] Segmentation: more SMP architectures, SegFormer
 - [ ] Every backend scored by the same P3 evaluator
 
