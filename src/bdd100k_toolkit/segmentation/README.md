@@ -15,9 +15,18 @@ the official-style mIoU evaluation are done.
 
 ## Download Data
 
-Needs the `10K Images` plus the `Semantic Segmentation` labels (instance and panoptic use
-`Instance Segmentation` and `Panoptic Segmentation`). The official BDD100K website is down and there
-is no Hugging Face copy yet, so there is currently no reliable download source for these.
+The official BDD100K website is down, so there is an unofficial redistribution on Hugging Face:
+
+| Task | Dataset |
+|---|---|
+| Semantic segmentation | 🤗 [dronefreak/BDD100K-Semantic-Segmentation](https://huggingface.co/datasets/dronefreak/BDD100K-Semantic-Segmentation) |
+
+```bash
+hf download dronefreak/BDD100K-Semantic-Segmentation --repo-type dataset --local-dir /path/to/bdd100k_10k
+```
+
+The adapter is not yet checked against this copy's layout. Instance and panoptic segmentation need the
+`Instance Segmentation` and `Panoptic Segmentation` labels, which have no Hugging Face copy yet.
 
 ## Usage
 

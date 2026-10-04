@@ -1,8 +1,6 @@
 # Roadmap
 
-One line per task. `[x]` done, `[ ]` open. Details: `VISION.md` (architecture),
-`docs/official-toolkit-review.md` (what to avoid), `docs/reference-bdd100k-models.md`
-(data needs and baseline scores per task).
+One line per task. `[x]` done, `[ ]` open. Details: `VISION.md` (architecture).
 
 ```text
 P0 foundation -> P1 real data -> P2 shared core -> P3 official evaluation
@@ -15,7 +13,7 @@ P0 foundation -> P1 real data -> P2 shared core -> P3 official evaluation
 - [x] CI, pre-commit, ruff, mypy, bandit
 - [x] Detection: COCO adapter, COCO to YOLO bridge, YOLO trainer, evaluate CLI
 - [x] Semantic segmentation: image and mask adapter (19 classes), SMP trainer, mIoU
-- [x] Official toolkit review in `docs/official-toolkit-review.md`
+- [x] Official toolkit reviewed (spec facts and the bugs to avoid)
 
 ## P1 Real data and fidelity
 
@@ -26,10 +24,10 @@ P0 foundation -> P1 real data -> P2 shared core -> P3 official evaluation
 - [x] Classification: 3 tasks, 2 backends, 7+ models each, 3 tuning rounds, demo for image and video
 - [ ] CI green on `main`, branch protection
 - [x] Detection: real prepare (59,384 / 10,479 / 10,000 images) and a real smoke training run
-- [x] Detection baselines: 9 YOLO models from DetectionBench re-evaluated here (match to 0.00004 mAP), see `docs/detection-baselines.md`
+- [x] Detection baselines: 9 YOLO models from DetectionBench re-evaluated here (match to 0.00004 mAP)
 - [ ] Detection: higher resolution, longer schedule and larger models (leads in the baselines doc)
 - [ ] Semantic segmentation: real prepare run and real smoke training
-- [ ] `docs/classification-results.md` and Model Zoo refreshed with the final picks
+- [ ] Classification results write-up and Model Zoo refreshed with the final picks
 
 ## P2 Shared core
 
@@ -79,7 +77,7 @@ Each task: adapter, canonical format, trainer, evaluator, `validate/stats/visual
 
 ## P7 Baselines and release
 
-- [ ] `docs/baselines.md`: config, seed, checkpoint hash and score per task, next to the old zoo's numbers
+- [ ] Baselines table: config, seed, checkpoint hash and score per task, next to the old zoo's numbers
 - [ ] Docs site (mkdocs)
 - [ ] PyPI `0.2.0`, changelog, semver policy
 - [ ] Unify best-checkpoint metric across backends (macro F1)
