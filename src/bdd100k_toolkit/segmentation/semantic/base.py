@@ -37,6 +37,7 @@ class SemanticSegSpec:
     display_name: str
     classes: list[str]
     ignore_index: int = IGNORE_INDEX
+    categories: dict[str, list[str]] | None = None  # category -> class names
     description: str | None = None
     homepage: str | None = None
     citation: str | None = None

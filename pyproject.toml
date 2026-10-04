@@ -65,6 +65,10 @@ dev = [
 segmentation = [
     "segmentation-models-pytorch>=0.3.0",
 ]
+# Pretrained Hugging Face segmenters (SegFormer, Mask2Former) for `--hf-model` evaluation.
+transformers = [
+    "transformers>=5.0.0",
+]
 # Extra detection backend: RF-DETR (training and evaluation).
 rfdetr = [
     "rfdetr[train,loggers,augment]>=1.9.0,<2",
