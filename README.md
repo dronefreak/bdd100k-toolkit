@@ -51,6 +51,8 @@ python demo/classify.py --image frame.jpg --model weather=weights/weather/best.p
 To prepare the data, train and evaluate, every task uses the same three commands, `bdd100k-prepare`,
 `bdd100k-train` and `bdd100k-evaluate`; the task pages above have the full recipes.
 
+Data layouts, splits, design notes and baselines are in [docs/](docs/README.md).
+
 ## Datasets
 
 The official BDD100K website (bdd100k.com, bdd-data.berkeley.edu) is down. The original zips are still served, under the same license, by a Berkeley file server at <http://128.32.162.150/bdd100k/>, and the datasets below are unofficial redistributions on Hugging Face, which the BDD100K license allows as long as the copyright notice is carried forward.
