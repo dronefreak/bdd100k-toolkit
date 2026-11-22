@@ -13,7 +13,7 @@ splits. Checked against the Berkeley zips and the Hugging Face copies.
 | Berkeley zips, unpacked as below | `images/100k/{train,val,test}/` | `labels/100k/{train,val,test}/<id>.json` |
 | 2018 label download | `images/100k/{train,val}/` | `labels/bdd100k_labels_images_{train,val}.json` |
 | 2020 detection labels | `images/100k/{train,val}/` | `labels/det_20/det_{train,val}.json` |
-| Hugging Face classification repos | `data/images/{train,valid,test}/shard_NNN/` | `metadata.jsonl` per shard |
+| Hugging Face classification repos | `data/images/{train,val,test}/shard_NNN/` | `metadata.jsonl` per shard, raw values (`undefined`, `dawn/dusk`) |
 | Kaggle class folders | `{train,val}/<class>/*.jpg` | the folder name |
 
 The Berkeley zips have no top-level folder of their own, so unpack each into its

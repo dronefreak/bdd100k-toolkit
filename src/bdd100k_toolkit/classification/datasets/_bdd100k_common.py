@@ -25,9 +25,11 @@ Three input layouts are accepted (auto-detected under ``raw_dir``):
     is ignored (it has no labels).
 ``hf``
     The Hugging Face datasets ``dronefreak/BDD100K-{Weather,Period,Scenario}-
-    Classification``: ``data/images/{train,valid,test}/shard_*/`` with the jpgs
-    and a ``metadata.jsonl`` per shard (``{"file_name": ..., "label": <class>}``).
-    ``raw_dir`` is the downloaded repo root; ``test`` may be absent.
+    Classification``: ``data/images/{train,val,test}/shard_*/`` with the jpgs
+    and a ``metadata.jsonl`` per shard (``{"file_name": ..., "label": <value>}``).
+    The label is the raw value (``undefined``, ``dawn/dusk``) or the class name;
+    the validation folder may be ``val`` or ``valid``. ``raw_dir`` is the
+    downloaded repo root; ``test`` may be absent.
 
 Whichever is used, the splits are the official ones, with nothing carved out:
 ``train`` -> ``train``, official ``val`` -> ``valid``, and ``test`` -> ``test``
@@ -98,7 +100,7 @@ def detect_layout(raw_dir: Path, labels_dir: Path | None = None) -> Layout:
     raise FileNotFoundError(
         f"Unrecognised layout under {raw_dir}. Expected either "
         "images/100k/{train,val} + labels/ (or --labels-dir), "
-        "{train,val}/<class>/*.jpg, or the Hugging Face data/images/{train,valid}/."
+        "{train,val}/<class>/*.jpg, or the Hugging Face data/images/{train,val}/."
     )
 
 
@@ -148,7 +150,7 @@ def prepare_attribute_classification(  # noqa: PLR0913
             include_unknown,
         )
     elif layout == "hf":
-        by_split = _samples_from_hf(raw_dir, classes, include_unknown)
+        by_split = _samples_from_hf(raw_dir, classes, aliases or {}, include_unknown)
     else:
         by_split = _samples_from_folders(raw_dir, classes, include_unknown)
     options = image_options or ImageOptions()
@@ -278,35 +280,34 @@ def _samples_from_folders(
 
 
 def _samples_from_hf(
-    raw_dir: Path, classes: list[str], include_unknown: bool
+    raw_dir: Path,
+    classes: list[str],
+    aliases: dict[str, str],
+    include_unknown: bool,
 ) -> dict[str, list[_Sample]]:
-    """Read train, valid and optional test from the Hub shards + ``metadata.jsonl``."""
-    known = {*classes, UNKNOWN_CLASS}
+    """Read train, valid (``val`` or ``valid``) and optional test from Hub shards."""
+    images = raw_dir / "data" / "images"
     result: dict[str, list[_Sample]] = {}
-    for split in ("train", "valid", "test"):
-        if split == "test" and not (raw_dir / "data" / "images" / "test").is_dir():
+    splits = (("train", ("train",)), ("valid", ("val", "valid")), ("test", ("test",)))
+    for split, folders in splits:
+        found = [images / name for name in folders if (images / name).is_dir()]
+        if split == "test" and not found:
             continue
         samples: list[_Sample] = []
-        shards = sorted((raw_dir / "data" / "images" / split).glob("shard_*"))
-        for shard in shards:
+        for shard in sorted(s for folder in found for s in folder.glob("shard_*")):
             for line in (
                 (shard / "metadata.jsonl").read_text(encoding="utf-8").splitlines()
             ):
                 row = json.loads(line)
                 name, raw = row["file_name"], row["label"]
+                # Raw values (``undefined``, ``dawn/dusk``) or class names both work.
+                if raw == UNKNOWN_CLASS:
+                    raw = RAW_UNDEFINED
+                label, reason = _label_for(raw, classes, aliases, include_unknown)
                 path = shard / name
                 if not path.is_file():
-                    samples.append(
-                        _Sample(name, None, None, "label without image file")
-                    )
-                elif raw == UNKNOWN_CLASS and not include_unknown:
-                    samples.append(_Sample(name, path, None, "unknown excluded"))
-                elif raw in known:
-                    samples.append(_Sample(name, path, raw))
-                else:
-                    samples.append(
-                        _Sample(name, path, None, f"unexpected value {raw!r}")
-                    )
+                    label, reason = None, "label without image file"
+                samples.append(_Sample(name, path, label, reason))
         result[split] = samples
     return result
 
