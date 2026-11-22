@@ -98,12 +98,23 @@ def test_classification_gives_the_same_folders_from_per_image_labels(
 def test_detection_reads_the_hugging_face_hub_layout(
     raw_bdd100k_detection_dir: Path, tmp_path: Path
 ) -> None:
-    """``dronefreak/BDD100K``: data/images_100k/100k + data/labels, sharded."""
+    """
+    ``dronefreak/BDD100K``: data/images_100k/100k + data/labels, sharded.
+
+    The Hub copy also has a viewer ``metadata.jsonl`` next to the images; it is ignored.
+    """
     raw = raw_bdd100k_detection_dir
     hub = tmp_path / "hub"
     shutil.copytree(raw / "images", hub / "data" / "images_100k")
     shutil.copytree(raw / "labels", hub / "data" / "labels")
     _as_per_image(hub / "data" / "labels")
+    for split in (
+        "train",
+        "val",
+    ):  # the Hub's viewer table next to the images is ignored
+        (hub / "data" / "images_100k" / "100k" / split / "metadata.jsonl").write_text(
+            '{"file_name": "x.jpg", "objects": {"bbox": [], "category": []}}\n'
+        )
     legacy_out, hub_out = tmp_path / "legacy", tmp_path / "hub_out"
     with pytest.warns(UserWarning):
         get_detection("bdd100k-detection").prepare_coco(raw, legacy_out)

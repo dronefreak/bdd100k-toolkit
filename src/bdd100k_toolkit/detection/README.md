@@ -2,10 +2,10 @@
 
 Detect 10 classes (person, rider, car, truck, bus, train, motor, bike, traffic light,
 traffic sign) in the 100K-image BDD100K release, all 1280x720, on the official splits: 70,000 `train`,
-10,000 `valid` (the official val) and 20,000 `test` images. Boxes come from the official labels
-(`bdd100k_labels_images_{train,val,test}.json`, or the 2020 `det_20` files; the older 2018 download
-has no test file and then only `train` and `valid` are written); lanes and drivable-area polygons
-are ignored. The dataset is redistributed, as received, as
+10,000 `valid` (the official val) and 20,000 `test` images. Boxes come from the official labels:
+the per-image JSON files of `bdd100k_labels.zip`, which cover all three splits, or the single-file
+2018 or 2020 `det_20` labels, which have no test labels (then only `train` and `valid` are written).
+Lanes and drivable-area polygons are ignored. The dataset is redistributed, as received, as
 🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) on Hugging Face, and
 `bdd100k-prepare` converts it.
 
@@ -60,6 +60,10 @@ data/labels/100k/{train,val,test}/shard_NNN/<id>.json
 ```bash
 hf download dronefreak/BDD100K --repo-type dataset --local-dir /path/to/bdd100k_raw
 ```
+
+The `metadata.jsonl` next to the images is a table view of the same labels for the Hub's dataset
+viewer and `datasets.load_dataset("dronefreak/BDD100K")`; `bdd100k-prepare` reads the label JSON
+and ignores it.
 
 Convert it to the COCO and YOLO folders the training commands below read (the same command also
 accepts the unpacked Berkeley zips, `images/100k` + `labels`, and the single-file 2018 or `det_20`
