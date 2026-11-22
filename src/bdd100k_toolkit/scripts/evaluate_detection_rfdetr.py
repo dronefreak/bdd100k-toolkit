@@ -48,7 +48,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add("--model", default="rfdetr-nano", help="rfdetr-nano | small | medium | large")
     add("--dataset", required=True, choices=list_datasets(), help="Dataset key")
     add("--dataset-dir", required=True, help="Canonical COCO root (train/valid/test)")
-    add("--split", default="test", help="Split to evaluate")
+    add("--split", default="test", help="train, valid (official val) or test")
     add("--device", default="auto", help="cuda / cpu / auto")
     add("--resolution", type=int, help="Default: read from training_config.json")
     add("--limit", type=int, help="Only evaluate the first N images (smoke test)")

@@ -28,6 +28,7 @@ from bdd100k_toolkit.scripts.evaluate_detection import (
     EvaluationOptions,
     evaluate_detection,
     print_metrics_table,
+    require_yaml_split,
 )
 from bdd100k_toolkit.utils.console import RichConsoleManager
 from bdd100k_toolkit.utils.device import resolve_device
@@ -42,6 +43,7 @@ def train_and_evaluate(cfg: DictConfig) -> None:
     """Train the configured YOLO detector and evaluate the best checkpoint."""
     console = RichConsoleManager.get_console()
     console.print(OmegaConf.to_yaml(cfg))
+    require_yaml_split(cfg.evaluation.dataset_yaml, cfg.evaluation.split)
     trainer = YOLODetectionTrainer(
         model_name=cfg.model.name,
         num_classes=cfg.model.num_classes,

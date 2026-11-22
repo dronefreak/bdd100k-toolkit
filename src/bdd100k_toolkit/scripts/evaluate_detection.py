@@ -66,7 +66,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dataset-yaml", required=True, help="Ultralytics data.yaml")
     parser.add_argument(
-        "--split", default="test", help="Dataset split to evaluate (default: test)"
+        "--split",
+        default="test",
+        help="Dataset split to evaluate: train, valid (official val) or test",
     )
     parser.add_argument(
         "--device", default="cuda" if torch.cuda.is_available() else "cpu"
@@ -76,6 +78,30 @@ def parse_args() -> argparse.Namespace:
         "--save-predictions", action="store_true", help="Save predictions JSON"
     )
     return parser.parse_args()
+
+
+def ultralytics_split(split: str) -> str:
+    """Ultralytics names the validation split ``val``; ours is ``valid``."""
+    return "val" if split == "valid" else split
+
+
+def require_yaml_split(dataset_yaml: str | Path, split: str) -> None:
+    """
+    Fail early when ``dataset_yaml`` has no ``split`` to evaluate on.
+
+    ``bdd100k-train`` scores the model only after training, so without this check a
+    missing split (``test`` when the labels came from the 2018 download) would only
+    surface once the whole run had finished.
+    """
+    import yaml
+
+    name = ultralytics_split(split)
+    data = yaml.safe_load(Path(dataset_yaml).read_text(encoding="utf-8")) or {}
+    if not data.get(name):
+        raise ValueError(
+            f"{dataset_yaml} has no '{name}:' split to evaluate on. Prepare the data "
+            "with test labels, or pass evaluation.split=valid."
+        )
 
 
 def evaluate_detection(options: EvaluationOptions) -> dict[str, Any]:
@@ -96,7 +122,7 @@ def evaluate_detection(options: EvaluationOptions) -> dict[str, Any]:
     results = model.val(
         data=str(options.dataset_yaml),
         device=options.device,
-        split=options.split,
+        split=ultralytics_split(options.split),
         save_json=options.save_predictions,
         project=str(options.output_dir.resolve()),
         name="yolo_eval",

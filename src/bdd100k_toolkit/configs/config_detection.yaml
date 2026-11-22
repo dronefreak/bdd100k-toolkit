@@ -13,11 +13,12 @@ model:
   num_classes: ${dataset.num_classes}
 
 # Defaults are a reasoned starting point for BDD100K (not a tuned result):
-#   * 59k train / 10k valid / 10k test, all 1280x720, about 18 boxes per image.
+#   * 70k train / 10k valid / 20k test (official splits), all 1280x720, about 18
+#     boxes per image.
 #   * Small objects: traffic lights and signs are 33% of the boxes and mostly tiny
 #     (DetectionBench measured 55% of all boxes under 16 px at imgsz 640, 35% at
 #     960, 21% at 1280), so 960 is a compromise between accuracy and speed.
-#   * Strong imbalance (car 55% of boxes, only 113 `train` boxes in the train split),
+#   * Strong imbalance (car 55% of boxes, only 136 `train` boxes in the train split),
 #     so rare-class AP is noisy.
 training:
   dataset_yaml: ${dataset.dataset_yaml}
@@ -34,7 +35,7 @@ training:
   output_dir: experiments/${dataset.name}/${model.name}
   # Extra Ultralytics train() arguments, e.g. +training.extra.fraction=0.1
   extra:
-    warmup_epochs: 1.0  # about 930 steps per epoch, so 1 epoch is plenty
+    warmup_epochs: 1.0  # about 1,100 steps per epoch at batch 64, so 1 epoch is plenty
     close_mosaic: 10  # last 10 epochs without mosaic (natural dashcam scenes)
 
 evaluation:
