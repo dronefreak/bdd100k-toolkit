@@ -88,14 +88,12 @@ jobs:
       - name: Run tests with coverage
         run: |
           set -euo pipefail
-          # NOTE: the test suite is intentionally basic right now (dataset
-          # registry + the classification adapters, the torch-free parts
-          # of the codebase). Raise this as scripts/*.py and trainer.py get
-          # test coverage.
+          # Coverage is about 86% with these extras; the floor catches
+          # untested additions without failing on small fluctuations.
           python -m pytest tests/ \
             -v \
             --cov=bdd100k_toolkit \
-            --cov-fail-under=20 \
+            --cov-fail-under=80 \
             --cov-report=term-missing \
             --cov-report=xml
 
