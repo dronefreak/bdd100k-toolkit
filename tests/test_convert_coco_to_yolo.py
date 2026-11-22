@@ -20,9 +20,17 @@ def _args(input_dir: Path, output_dir: Path) -> argparse.Namespace:
 
 @pytest.fixture
 def coco_dir(raw_bdd100k_detection_dir: Path) -> Path:
-    out = raw_bdd100k_detection_dir.parent / "coco_out"
+    raw = raw_bdd100k_detection_dir
+    # A test split needs its own labels: reuse the val ones under the test name.
+    (raw / "images" / "100k" / "test").mkdir()
+    for image in (raw / "images" / "100k" / "val").glob("*.jpg"):
+        (raw / "images" / "100k" / "test" / image.name).write_bytes(b"fake")
+    (raw / "labels" / "bdd100k_labels_images_test.json").write_text(
+        (raw / "labels" / "bdd100k_labels_images_val.json").read_text()
+    )
+    out = raw.parent / "coco_out"
     with pytest.warns(UserWarning):
-        get("bdd100k-detection").prepare_coco(raw_bdd100k_detection_dir, out)
+        get("bdd100k-detection").prepare_coco(raw, out)
     return out
 
 

@@ -15,4 +15,4 @@ name: bdd100k-detection
 dataset_yaml: ???  # YOLO data.yaml (YOLO models)
 dataset_dir: ???  # canonical COCO root (RF-DETR models)
 num_classes: 10
-eval_split: test
+eval_split: test  # final scores on the official test split; `valid` is for model selection

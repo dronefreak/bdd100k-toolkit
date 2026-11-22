@@ -1,8 +1,8 @@
 r"""
 `bdd100k-evaluate`: evaluate a trained segmentation model.
 
-Computes per-class IoU and mIoU on the canonical ``test`` split. With ``--hf-model``
-it scores a pretrained Hugging Face model instead (see
+Computes per-class IoU and mIoU on the canonical ``valid`` split (the official val).
+With ``--hf-model`` it scores a pretrained Hugging Face model instead (see
 ``evaluate_semantic_seg_pretrained``).
 
 Usage:
@@ -42,12 +42,14 @@ def parse_args() -> argparse.Namespace:
         help="Registered dataset key (determines class names/count)",
     )
     parser.add_argument(
-        "--data-dir", required=True, help="Canonical segmentation root (has test/)"
+        "--data-dir", required=True, help="Canonical segmentation root (has valid/)"
     )
     parser.add_argument("--architecture", default="Unet")
     parser.add_argument("--encoder-name", default="resnet34")
     parser.add_argument(
-        "--split", default="test", help="Split to evaluate (default: test)"
+        "--split",
+        default="valid",
+        help="Split to evaluate (default: valid, the official val; test has no masks)",
     )
     parser.add_argument("--imgsz", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=8)

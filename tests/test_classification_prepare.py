@@ -77,7 +77,7 @@ def test_both_layouts_give_identical_output(
     assert _listing(from_official) == _listing(from_hf)
 
 
-def test_exclude_unknown_keeps_the_same_holdout(
+def test_exclude_unknown_only_drops_the_unknown_images(
     raw_bdd100k_dir: Path, tmp_path: Path
 ) -> None:
     with_unknown = tmp_path / "with"
@@ -85,9 +85,9 @@ def test_exclude_unknown_keeps_the_same_holdout(
     adapter = get("bdd100k-weather")
     adapter.prepare_classification(raw_bdd100k_dir, with_unknown)
     adapter.prepare_classification(raw_bdd100k_dir, without, include_unknown=False)
-    valid_with = {n for s, _, n in _listing(with_unknown) if s == "valid"}
-    valid_without = {n for s, _, n in _listing(without) if s == "valid"}
-    assert valid_without == valid_with - {"t4.jpg"}
+    names_with = {(s, n) for s, _, n in _listing(with_unknown)}
+    names_without = {(s, n) for s, _, n in _listing(without)}
+    assert names_without == names_with - {("train", "t4.jpg")}
 
 
 def test_dawn_or_dusk_is_one_folder_not_a_nested_path(
@@ -108,7 +108,7 @@ def test_labels_dir_can_live_elsewhere(raw_bdd100k_dir: Path, tmp_path: Path) ->
     get("bdd100k-weather").prepare_classification(
         raw_bdd100k_dir, out, labels_dir=elsewhere
     )
-    assert list(out.glob("test/foggy/v0.jpg"))
+    assert list(out.glob("valid/foggy/v0.jpg"))
 
 
 def test_unrecognised_layout_is_a_clear_error(tmp_path: Path) -> None:
@@ -132,7 +132,7 @@ def test_folders_layout_can_exclude_unknown(
     out = tmp_path / "out"
     get("bdd100k-weather").prepare_classification(folders, out, include_unknown=False)
     assert not list(out.glob("*/unknown"))
-    assert len(_listing(out)) == 7  # 5 train/valid + 2 test
+    assert len(_listing(out)) == 7  # 5 train + 2 valid
 
 
 def test_unexpected_attribute_values_are_reported(
@@ -154,17 +154,17 @@ def test_labels_without_image_files_are_reported(
         get("bdd100k-weather").prepare_classification(raw_bdd100k_dir, tmp_path / "o")
 
 
-def test_empty_test_split_raises(raw_bdd100k_dir: Path, tmp_path: Path) -> None:
+def test_empty_valid_split_raises(raw_bdd100k_dir: Path, tmp_path: Path) -> None:
     shutil.rmtree(raw_bdd100k_dir / "images" / "100k" / "val")
     (raw_bdd100k_dir / "images" / "100k" / "val").mkdir()
-    with pytest.raises(EmptySplitError, match="test"), pytest.warns(UserWarning):
+    with pytest.raises(EmptySplitError, match="valid"), pytest.warns(UserWarning):
         get("bdd100k-weather").prepare_classification(raw_bdd100k_dir, tmp_path / "o")
 
 
-def test_classification_and_detection_share_the_same_holdout(
+def test_classification_and_detection_use_the_same_official_splits(
     raw_bdd100k_dir: Path, tmp_path: Path
 ) -> None:
-    """Same images are valid/test in every task, so results are comparable."""
+    """Same images are train/valid in every task, so results are comparable."""
     for split in ("train", "val"):
         path = raw_bdd100k_dir / "labels" / f"bdd100k_labels_images_{split}.json"
         entries = json.loads(path.read_text())
@@ -178,7 +178,22 @@ def test_classification_and_detection_share_the_same_holdout(
     get("bdd100k-weather").prepare_classification(raw_bdd100k_dir, cls_out)
     with pytest.warns(UserWarning):
         get_detection("bdd100k-detection").prepare_coco(raw_bdd100k_dir, det_out)
-    for split in ("train", "valid", "test"):
+    for split in ("train", "valid"):
         cls_names = {n for s, _, n in _listing(cls_out) if s == split}
         det_names = {p.name for p in (det_out / split).glob("*.jpg")}
         assert cls_names == det_names, split
+
+
+def test_official_test_split_is_written_when_its_labels_exist(
+    raw_bdd100k_dir: Path, tmp_path: Path
+) -> None:
+    (raw_bdd100k_dir / "images" / "100k" / "test").mkdir()
+    (raw_bdd100k_dir / "images" / "100k" / "test" / "x0.jpg").write_bytes(b"fake")
+    entry = {"name": "x0.jpg", "attributes": {"weather": "rainy"}, "labels": []}
+    (raw_bdd100k_dir / "labels" / "bdd100k_labels_images_test.json").write_text(
+        json.dumps([entry])
+    )
+    out = tmp_path / "out"
+    get("bdd100k-weather").prepare_classification(raw_bdd100k_dir, out)
+    assert list(out.glob("test/rainy/x0.jpg"))
+    assert {s for s, _, _ in _listing(out)} == {"train", "valid", "test"}

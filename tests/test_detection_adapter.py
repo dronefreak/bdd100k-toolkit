@@ -13,21 +13,21 @@ def test_prepare_coco_writes_expected_splits(raw_bdd100k_detection_dir: Path) ->
     adapter = get("bdd100k-detection")
     adapter.prepare_coco(raw_bdd100k_detection_dir, output_dir)
 
-    for split in ("train", "valid", "test"):
+    for split in ("train", "valid"):
         annotation_path = output_dir / split / "_annotations.coco.json"
         assert annotation_path.is_file()
 
-    # 6 train entries total; a seeded 15% split carves >=1 into valid.
+    # Official splits: 6 train entries, 2 val entries (written as valid), and no
+    # test split because the fixture has no test labels.
     train_data = json.loads(
         (output_dir / "train" / "_annotations.coco.json").read_text()
     )
     valid_data = json.loads(
         (output_dir / "valid" / "_annotations.coco.json").read_text()
     )
-    assert len(train_data["images"]) + len(valid_data["images"]) == 6
-
-    test_data = json.loads((output_dir / "test" / "_annotations.coco.json").read_text())
-    assert len(test_data["images"]) == 2
+    assert len(train_data["images"]) == 6
+    assert len(valid_data["images"]) == 2
+    assert not (output_dir / "test").exists()
 
     # 10 classes always emitted regardless of which ones appear in this split.
     assert len(train_data["categories"]) == 10
@@ -41,7 +41,7 @@ def test_prepare_coco_drops_unknown_categories_and_bad_categories(
     adapter.prepare_coco(raw_bdd100k_detection_dir, output_dir)
 
     all_annotations = []
-    for split in ("train", "valid", "test"):
+    for split in ("train", "valid"):
         data = json.loads((output_dir / split / "_annotations.coco.json").read_text())
         all_annotations.extend(data["annotations"])
 
@@ -58,5 +58,25 @@ def test_prepare_coco_links_images(raw_bdd100k_detection_dir: Path) -> None:
     adapter = get("bdd100k-detection")
     adapter.prepare_coco(raw_bdd100k_detection_dir, output_dir)
 
-    assert (output_dir / "test" / "v0.jpg").is_file()
-    assert (output_dir / "test" / "v1.jpg").is_file()
+    assert (output_dir / "valid" / "v0.jpg").is_file()
+    assert (output_dir / "valid" / "v1.jpg").is_file()
+
+
+def test_prepare_coco_writes_test_split_when_its_labels_exist(
+    raw_bdd100k_detection_dir: Path,
+) -> None:
+    raw = raw_bdd100k_detection_dir
+    (raw / "images" / "100k" / "test").mkdir()
+    (raw / "images" / "100k" / "test" / "x0.jpg").write_bytes(b"fake")
+    entry = {
+        "name": "x0.jpg",
+        "attributes": {},
+        "labels": [{"category": "car", "box2d": {"x1": 1, "y1": 1, "x2": 9, "y2": 9}}],
+    }
+    (raw / "labels" / "bdd100k_labels_images_test.json").write_text(json.dumps([entry]))
+    output_dir = raw.parent / "coco_out"
+    get("bdd100k-detection").prepare_coco(raw, output_dir)
+
+    test_data = json.loads((output_dir / "test" / "_annotations.coco.json").read_text())
+    assert [i["file_name"] for i in test_data["images"]] == ["x0.jpg"]
+    assert len(test_data["annotations"]) == 1

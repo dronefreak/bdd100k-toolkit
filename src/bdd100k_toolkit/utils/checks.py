@@ -30,7 +30,7 @@ def require_nonempty(
         detail: What was expected / skipped, appended to the message to
             help diagnose a wrong raw layout.
         required: Raise :class:`EmptySplitError` when True, otherwise only warn
-            (used for the small seeded ``valid`` holdout).
+            (for an optional split such as ``test``).
 
     """
     if count > 0:

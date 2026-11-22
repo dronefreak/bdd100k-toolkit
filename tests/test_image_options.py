@@ -32,6 +32,18 @@ def _size(path: Path) -> tuple[int, int]:
 @pytest.fixture
 def real_raw_dir(raw_bdd100k_dir: Path) -> Path:
     """Return the fake official download, with real 640x360 JPEGs, not dummy bytes."""
+    # The official test split only exists when it has labels, so add a small one.
+    test_dir = raw_bdd100k_dir / "images" / "100k" / "test"
+    test_dir.mkdir()
+    names = ["x0.jpg", "x1.jpg"]
+    entries = [
+        {"name": n, "attributes": {"weather": "clear"}, "labels": []} for n in names
+    ]
+    for name in names:
+        (test_dir / name).write_bytes(b"fake")
+    (raw_bdd100k_dir / "labels" / "bdd100k_labels_images_test.json").write_text(
+        json.dumps(entries)
+    )
     for jpg in (raw_bdd100k_dir / "images" / "100k").rglob("*.jpg"):
         _save(jpg, WIDE)
     return raw_bdd100k_dir
@@ -120,7 +132,7 @@ def test_prepare_shrinks_train_and_valid_but_not_test_by_default(
             assert _size(jpg) == (320, 180), jpg
     for jpg in (out / "test").rglob("*.jpg"):
         assert _size(jpg) == WIDE
-        source = real_raw_dir / "images" / "100k" / "val" / jpg.name
+        source = real_raw_dir / "images" / "100k" / "test" / jpg.name
         assert os.path.samefile(jpg, source)  # still a hardlink to the original
 
 
@@ -167,7 +179,7 @@ def test_prepare_info_records_how_the_dataset_was_made(
     assert info["max_width"] == 320 and info["jpeg_quality"] == 80
     assert info["shrink_test"] is False and info["include_unknown"] is False
     assert info["layout"] == "official"
-    assert sum(info["images_per_split"].values()) == 7  # 5 train/valid + 2 test
+    assert sum(info["images_per_split"].values()) == 9  # 5 train + 2 valid + 2 test
     # plain runs record that nothing was shrunk
     plain = tmp_path / "plain"
     get("bdd100k-weather").prepare_classification(real_raw_dir, plain)
@@ -198,7 +210,8 @@ def test_resizing_works_from_the_kaggle_folder_layout_too(tmp_path: Path) -> Non
         tmp_path / "kaggle", out, image_options=ImageOptions(max_width=320, workers=1)
     )
     assert {_size(p) for p in (out / "train").rglob("*.jpg")} == {(320, 180)}
-    assert {_size(p) for p in (out / "test").rglob("*.jpg")} == {WIDE}
+    assert {_size(p) for p in (out / "valid").rglob("*.jpg")} == {(320, 180)}
+    assert not (out / "test").exists()  # the Kaggle test folder has no labels
 
 
 def test_cli_flags_reach_the_adapter(

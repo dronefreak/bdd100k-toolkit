@@ -1,13 +1,18 @@
 """
 BDD100K semantic segmentation adapter.
 
-Source: the Berkeley DeepDrive "10K Images" package
-(``images/10k/{train,val,test}/*.jpg``) plus the official ``sem_seg`` label
-release's **mask** format (``labels/sem_seg/masks/{train,val}/*.png``:
-one 1-channel 8-bit PNG per image, pixel value = class id, ``255`` =
-"unknown"/ignore). This adapter reads the mask PNGs directly and never
-touches the JSON/RLE/polygon label variants BDD100K also ships, so it has
-no dependency on ``scalabel`` or the official toolkit.
+Source: the Berkeley DeepDrive "10K Images" package plus the ``sem_seg`` label
+masks: one 1-channel 8-bit PNG per image, pixel value = class id, ``255`` =
+"unknown"/ignore. This adapter reads the mask PNGs directly and never touches the
+JSON/RLE/polygon label variants BDD100K also ships, so it has no dependency on
+``scalabel`` or the official toolkit. Three layouts are found under ``raw_dir``
+(or ``raw_dir/data``), and the files may sit in ``shard_NNN/`` sub-folders:
+
+* ``images_10k/10k/<split>`` + ``seg_maps/labels/<split>``: the Berkeley zips
+  ``bdd100k_images_10k.zip`` + ``bdd100k_seg_maps.zip``, and the Hugging Face copy
+  ``dronefreak/BDD100K-Semantic-Segmentation``;
+* ``images/10k/<split>`` + ``labels/sem_seg/masks/<split>``: the later label release;
+* ``seg/images/<split>`` + ``seg/labels/<split>``: the older ``bdd100k_seg.zip``.
 
 Note the 10K Images package is a *different* image set from the 100K
 Images package the detection/classification adapters use: per BDD100K's
@@ -15,11 +20,9 @@ own docs it "is not a subset of the 100K images, even though there is a
 significant overlap", so a semantic segmentation run needs its own
 download, not the one already used for detection/classification.
 
-BDD100K's own labelled splits are ``train`` (7,000) and ``val`` (1,000).
-This adapter keeps ``val`` as the canonical ``test`` split and carves a
-seeded validation set out of ``train`` (``_VAL_FRACTION``), the same
-convention used by the detection/classification adapters. The public
-``test`` split (2,000 images) ships with no masks and is not used here.
+The splits are the official ones, as for detection and classification: ``train``
+(7,000) -> ``train`` and ``val`` (1,000) -> ``valid``. The ``test`` split (2,000
+images) ships without masks, so no ``test`` folder is written.
 
 19 classes are evaluated (see ``_CLASSES``); mask value 255 means "ignore"
 and is preserved verbatim in the canonical output rather than remapped.
@@ -40,7 +43,6 @@ from bdd100k_toolkit.segmentation.semantic.base import (
 from bdd100k_toolkit.segmentation.semantic.registry import register
 from bdd100k_toolkit.utils.checks import require_nonempty
 from bdd100k_toolkit.utils.io import link_image
-from bdd100k_toolkit.utils.split import seeded_holdout
 
 _CLASSES = [
     "road",
@@ -75,8 +77,21 @@ _CATEGORIES = {
     "vehicle": ["car", "truck", "bus", "train", "motorcycle", "bicycle"],
 }
 
-_VAL_FRACTION = 0.15
-_SPLIT_SEED = 42
+# (image root, mask root) pairs, relative to ``raw_dir`` or ``raw_dir/data``.
+_LAYOUTS = (
+    ("images_10k/10k", "seg_maps/labels"),
+    ("images/10k", "labels/sem_seg/masks"),
+    ("seg/images", "seg/labels"),
+)
+
+
+def find_layout(raw_dir: Path) -> tuple[Path, Path] | None:
+    """Return ``(image_root, mask_root)`` of a 10K sem_seg download, or None."""
+    for base in (raw_dir, raw_dir / "data"):
+        for images, masks in _LAYOUTS:
+            if (base / images).is_dir() and (base / masks).is_dir():
+                return base / images, base / masks
+    return None
 
 
 @register
@@ -104,29 +119,20 @@ class BDD100KSemanticSegAdapter(SemanticSegAdapter):
 
     def prepare_segmentation(self, raw_dir: Path, output_dir: Path) -> None:
         """Convert the official BDD100K 10K-images sem_seg release into canonical."""
-        image_dir = raw_dir / "images" / "10k"
-        mask_dir = raw_dir / "labels" / "sem_seg" / "masks"
-        if not image_dir.is_dir() or not mask_dir.is_dir():
+        found = find_layout(raw_dir)
+        if found is None:
+            expected = ", ".join(f"{i} + {m}" for i, m in _LAYOUTS)
             raise FileNotFoundError(
-                f"Expected {raw_dir}/images/10k and {raw_dir}/labels/sem_seg/masks."
+                f"No 10K images and sem_seg masks under {raw_dir} (or {raw_dir}/data)."
+                f" Expected one of: {expected}."
             )
+        image_dir, mask_dir = found
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        train_pairs = _pair_images_and_masks(image_dir / "train", mask_dir / "train")
-        train_stems, val_stems = seeded_holdout(
-            sorted(train_pairs), _VAL_FRACTION, _SPLIT_SEED
-        )
-        write_image_mask_split(
-            {s: train_pairs[s] for s in train_stems}, output_dir / "train"
-        )
-        write_image_mask_split(
-            {s: train_pairs[s] for s in val_stems},
-            output_dir / "valid",
-            required=False,
-        )
-
-        test_pairs = _pair_images_and_masks(image_dir / "val", mask_dir / "val")
-        write_image_mask_split(test_pairs, output_dir / "test")
+        # Official splits: train -> train, val -> valid; test has no masks.
+        for raw_split, split in (("train", "train"), ("val", "valid")):
+            pairs = _pair_images_and_masks(image_dir / raw_split, mask_dir / raw_split)
+            write_image_mask_split(pairs, output_dir / split)
 
 
 # The older BDD100K release names masks ``<stem>_train_id.png``; the current
@@ -146,10 +152,10 @@ def _pair_images_and_masks(
     image_dir: Path, mask_dir: Path
 ) -> dict[str, tuple[Path, Path]]:
     """Map ``file stem -> (image_path, mask_path)`` for every matched pair."""
-    masks_by_stem = {_mask_stem(p): p for p in mask_dir.glob("*.png")}
+    masks_by_stem = {_mask_stem(p): p for p in mask_dir.rglob("*.png")}
     pairs: dict[str, tuple[Path, Path]] = {}
     unmatched_images = 0
-    for image_path in image_dir.glob("*.jpg"):
+    for image_path in image_dir.rglob("*.jpg"):
         mask_path = masks_by_stem.get(image_path.stem)
         if mask_path is None:
             unmatched_images += 1
@@ -172,8 +178,6 @@ def _pair_images_and_masks(
 def write_image_mask_split(
     pairs: dict[str, tuple[Path, Path]],
     split_output_dir: Path,
-    *,
-    required: bool = True,
 ) -> None:
     """Materialize an ``images/`` + ``masks/`` canonical split from matched pairs."""
     images_out = split_output_dir / "images"
@@ -188,5 +192,4 @@ def write_image_mask_split(
         split_output_dir.name,
         len(pairs),
         "no image/mask pairs were written",
-        required=required,
     )

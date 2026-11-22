@@ -32,20 +32,20 @@ task and are dropped; ``other person`` / ``other vehicle`` / ``trailer``
 regions (ignored regions in the official evaluation) are dropped *and
 counted*, and the 2020 names ``pedestrian/motorcycle/bicycle`` are accepted
 as aliases of the 2018 ``person/motor/bike``. Every drop is reported per
-split, and an empty ``train``/``test`` split raises. The official ``test``
-split (20,000 images) ships with no labels (held out for the leaderboard)
-and is not used here.
+split, and an empty split raises. The official ``test`` split (20,000
+images) is written only when a ``bdd100k_labels_images_test.json`` (or
+``det_20/det_test.json``) is present; the 2018 release withheld those labels.
 
 This is the same raw download the classification adapters
 (``bdd100k_toolkit.classification.datasets``) derive their labels from
 ``attributes.{weather,timeofday,scene}`` on the very same JSON entries,
 so a single BDD100K download prepares every task in this project.
 
-BDD100K's own labelled splits are ``train`` (69,863 labelled images) and
-``val`` (10,000). This adapter keeps ``val`` as the canonical ``test``
-(consistent with how ``val``'s ground truth in this release is only usable
-as a held-out eval set, not for training) and carves a seeded validation
-set out of ``train`` (``_VAL_FRACTION``).
+The splits are the official ones: ``train`` (70,000 images with the newer
+per-image labels, 69,863 with the 2018 file), ``val`` (10,000, written as
+``valid``) and, when its labels are available, ``test`` (20,000). Nothing is
+carved out of ``train`` any more, so a model's validation images are exactly
+the official val images.
 
 License: Berkeley DeepDrive's own **BDD100K License** (UC Regents): free for
 educational, research and not-for-profit use, including copying and
@@ -77,7 +77,7 @@ from bdd100k_toolkit.detection.base import (
 )
 from bdd100k_toolkit.detection.registry import register
 from bdd100k_toolkit.utils.checks import format_counts, require_nonempty
-from bdd100k_toolkit.utils.split import seeded_holdout
+from bdd100k_toolkit.utils.labels import label_source, official_dirs, read_entries
 
 _CLASSES = [
     "person",
@@ -96,13 +96,19 @@ _CLASS_TO_ID = {name: i for i, name in enumerate(_CLASSES)}
 _IMAGE_WIDTH = 1280
 _IMAGE_HEIGHT = 720
 
+
 # Label files, in order of preference. ``det_20`` is the 2020 revision the
 # official docs recommend; the 2018 file is deprecated ("kept for comparison
 # with legacy results") but still the only one carrying the frame
 # ``attributes`` used by the classification tasks.
+def _det20_source(label_dir: Path, split: str) -> Path | None:
+    path = label_dir / "det_20" / f"det_{split}.json"
+    return path if path.is_file() else None
+
+
 _LABEL_SOURCES = (
-    ("det_20", "det_20/det_{split}.json"),
-    ("legacy", "bdd100k_labels_images_{split}.json"),
+    ("det_20", _det20_source),
+    ("legacy", label_source),  # single-file JSON, or a folder of per-image JSON
 )
 
 # The 2018 labels use ``person/motor/bike``; the official toolkit's config
@@ -115,9 +121,6 @@ _CATEGORY_ALIASES = {
 }
 # Regions the official evaluation treats as "ignored" rather than as classes.
 _IGNORED_CATEGORIES = frozenset({"other person", "other vehicle", "trailer"})
-
-_VAL_FRACTION = 0.15
-_SPLIT_SEED = 42
 
 
 @register
@@ -164,54 +167,43 @@ class BDD100KDetectionAdapter(DatasetAdapter):
         self, raw_dir: Path, output_dir: Path, *, labels_dir: Path | None = None
     ) -> None:
         """Convert the official BDD100K 100k-images release into canonical COCO."""
-        image_dir = raw_dir / "images" / "100k"
-        label_dir = labels_dir or raw_dir / "labels"
-        if not image_dir.is_dir() or not label_dir.is_dir():
+        found = official_dirs(raw_dir, labels_dir)
+        if found is None:
             raise FileNotFoundError(
-                f"Expected {raw_dir}/images/100k and {raw_dir}/labels."
+                f"Expected {raw_dir}/images/100k and {raw_dir}/labels (or the "
+                "Hugging Face layout data/images_100k/100k and data/labels)."
             )
+        image_dir, label_dir = found
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        source, train_json, val_json = _resolve_label_files(label_dir)
-        print(f"Using {source} box2d labels: {train_json.name}, {val_json.name}")
+        source, label_files = _resolve_label_files(label_dir)
+        print(f"Using {source} box2d labels for: {', '.join(label_files)}")
 
-        train_entries = json.loads(train_json.read_text(encoding="utf-8"))
-        train_images_by_path = _index_images(image_dir / "train")
-        # Same holdout as the classification tasks (sorted names, same seed), so
-        # the valid images are identical across tasks.
-        _, valid_names = seeded_holdout(
-            sorted(e["name"] for e in train_entries), _VAL_FRACTION, _SPLIT_SEED
-        )
-        val_names = set(valid_names)
-
-        _write_split(
-            [e for e in train_entries if e["name"] not in val_names],
-            train_images_by_path,
-            output_dir / "train",
-        )
-        _write_split(
-            [e for e in train_entries if e["name"] in val_names],
-            train_images_by_path,
-            output_dir / "valid",
-            required=False,
-        )
-
-        val_entries = json.loads(val_json.read_text(encoding="utf-8"))
-        val_images_by_path = _index_images(image_dir / "val")
-        _write_split(val_entries, val_images_by_path, output_dir / "test")
+        # Official splits: train -> train, val -> valid, test -> test (only when its
+        # labels are present; the 2018 release withheld them).
+        for label_split, image_split, output_split in (
+            ("train", "train", "train"),
+            ("val", "val", "valid"),
+            ("test", "test", "test"),
+        ):
+            if label_split not in label_files:
+                print(f"[{output_split}] no label file, split skipped")
+                continue
+            entries = read_entries(label_files[label_split])
+            images_by_name = _index_images(image_dir / image_split)
+            _write_split(entries, images_by_name, output_dir / output_split)
 
 
-def _resolve_label_files(label_dir: Path) -> tuple[str, Path, Path]:
-    """Pick one label source whose train *and* val files both exist."""
-    tried: list[str] = []
-    for source, template in _LABEL_SOURCES:
-        train_json = label_dir / template.format(split="train")
-        val_json = label_dir / template.format(split="val")
-        if train_json.is_file() and val_json.is_file():
-            return source, train_json, val_json
-        tried.append(f"{train_json} + {val_json}")
+def _resolve_label_files(label_dir: Path) -> tuple[str, dict[str, Path]]:
+    """Pick one label source with train *and* val labels; ``test`` is optional."""
+    for source, locate in _LABEL_SOURCES:
+        found = {split: locate(label_dir, split) for split in ("train", "val", "test")}
+        if found["train"] is not None and found["val"] is not None:
+            return source, {s: p for s, p in found.items() if p is not None}
     raise FileNotFoundError(
-        "No BDD100K detection label files found. Looked for: " + "; ".join(tried)
+        f"No BDD100K detection label files found in {label_dir}. Looked for "
+        "det_20/det_{train,val}.json, bdd100k_labels_images_{train,val}.json, or "
+        "per-image JSON files under 100k/{train,val}/."
     )
 
 

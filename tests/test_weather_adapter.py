@@ -13,16 +13,17 @@ def test_prepare_classification_writes_canonical_layout(
     output_dir = tmp_path / "canonical"
     BDD100KWeatherAdapter().prepare_classification(raw_bdd100k_dir, output_dir)
 
-    # test split comes straight from val entries: 2 images, both valid weather.
-    test_files = list((output_dir / "test").rglob("*.jpg"))
-    assert len(test_files) == 2
-    assert (output_dir / "test" / "foggy" / "v0.jpg").is_file()
-    assert (output_dir / "test" / "clear" / "v1.jpg").is_file()
+    # Official splits: valid comes straight from the val entries (2 images), and
+    # there is no test split because the fixture has no test labels.
+    valid_files = list((output_dir / "valid").rglob("*.jpg"))
+    assert len(valid_files) == 2
+    assert (output_dir / "valid" / "foggy" / "v0.jpg").is_file()
+    assert (output_dir / "valid" / "clear" / "v1.jpg").is_file()
+    assert not (output_dir / "test").exists()
 
     # t4.jpg has weather="undefined": it is the `unknown` class by default.
     train_files = list((output_dir / "train").rglob("*.jpg"))
-    valid_files = list((output_dir / "valid").rglob("*.jpg"))
-    assert len(train_files) + len(valid_files) == 6
+    assert len(train_files) == 6
     unknown = list(output_dir.glob("*/unknown/t4.jpg"))
     assert len(unknown) == 1
 
@@ -37,7 +38,7 @@ def test_prepare_classification_can_exclude_unknown(
     files = [
         p for split in ("train", "valid") for p in (output_dir / split).rglob("*.jpg")
     ]
-    assert len(files) == 5
+    assert len(files) == 7  # 5 train + 2 valid
     assert "t4.jpg" not in {p.name for p in files}
     assert not list(output_dir.glob("*/unknown"))
 

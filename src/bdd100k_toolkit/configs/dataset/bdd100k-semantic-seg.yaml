@@ -13,4 +13,4 @@ name: bdd100k-semantic-seg
 data_dir: ???
 num_classes: 19
 ignore_index: 255
-eval_split: test
+eval_split: valid  # official val; the official test split has no public masks

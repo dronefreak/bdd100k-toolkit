@@ -40,8 +40,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--labels-dir",
         default=None,
-        help="Folder with bdd100k_labels_images_{train,val}.json when it is not "
-        "<raw-dir>/labels (official layout only)",
+        help="Label folder when it is not <raw-dir>/labels (official layout only): "
+        "bdd100k_labels_images_<split>.json files or a 100k/<split>/ folder of "
+        "per-image JSON",
     )
     parser.add_argument(
         "--max-width",

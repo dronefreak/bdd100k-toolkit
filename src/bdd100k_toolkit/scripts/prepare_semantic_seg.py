@@ -2,7 +2,7 @@ r"""
 `bdd100k-prepare` entrypoint.
 
 Converts a raw BDD100K 10K-images download into the canonical
-``{train,valid,test}/{images,masks}`` semantic segmentation layout.
+``{train,valid}/{images,masks}`` semantic segmentation layout.
 
 Usage:
   bdd100k-prepare --dataset bdd100k-semantic-seg \
@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--raw-dir",
         required=True,
-        help="Raw BDD100K download (images/10k + labels/sem_seg/masks)",
+        help="Raw 10K download: images_10k/10k + seg_maps/labels (Berkeley zips, Hub)",
     )
     parser.add_argument(
         "--output-dir", required=True, help="Canonical output root to write splits into"

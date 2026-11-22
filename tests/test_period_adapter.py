@@ -13,12 +13,11 @@ def test_prepare_classification_writes_canonical_layout(
     output_dir = tmp_path / "canonical"
     BDD100KPeriodAdapter().prepare_classification(raw_bdd100k_dir, output_dir)
 
-    test_files = list((output_dir / "test").rglob("*.jpg"))
-    assert len(test_files) == 2
-    assert (output_dir / "test" / "night" / "v0.jpg").is_file()
-    assert (output_dir / "test" / "daytime" / "v1.jpg").is_file()
+    valid_files = list((output_dir / "valid").rglob("*.jpg"))
+    assert len(valid_files) == 2
+    assert (output_dir / "valid" / "night" / "v0.jpg").is_file()
+    assert (output_dir / "valid" / "daytime" / "v1.jpg").is_file()
 
     train_files = list((output_dir / "train").rglob("*.jpg"))
-    valid_files = list((output_dir / "valid").rglob("*.jpg"))
     # 6 train entries: the one with timeofday="undefined" is the `unknown` class
-    assert len(train_files) + len(valid_files) == 6
+    assert len(train_files) == 6

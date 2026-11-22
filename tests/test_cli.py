@@ -109,7 +109,7 @@ def test_prepare_dispatches_classification(
         ],
     )
     cli.prepare()
-    assert (out / "test" / "foggy" / "v0.jpg").is_file()
+    assert (out / "valid" / "foggy" / "v0.jpg").is_file()
 
 
 def test_prepare_dispatches_detection_and_segmentation(
@@ -133,7 +133,7 @@ def test_prepare_dispatches_detection_and_segmentation(
     )
     with pytest.warns(UserWarning):
         cli.prepare()
-    assert (out / "test" / "_annotations.coco.json").is_file()
+    assert (out / "valid" / "_annotations.coco.json").is_file()
 
 
 def test_prepare_task_dataset_mismatch_is_rejected(

@@ -32,7 +32,9 @@ def parse_args() -> argparse.Namespace:
         help="Registered dataset key",
     )
     parser.add_argument(
-        "--raw-dir", required=True, help="Raw BDD100K download (images/100k + labels)"
+        "--raw-dir",
+        required=True,
+        help="Raw BDD100K download (images/100k or images_100k/100k, plus labels)",
     )
     parser.add_argument(
         "--labels-dir",

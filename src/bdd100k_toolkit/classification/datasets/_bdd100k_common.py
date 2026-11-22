@@ -7,29 +7,32 @@ The tasks follow three Kaggle re-exports (period / weather / scenario
 classification, folders ``train/<class>/*.jpg``) whose labels, checked image by
 image against the official JSON, are identical: ``unknown`` is the official
 ``undefined`` value, and ``dawn/dusk`` is spelled ``dawn or dusk`` because a
-slash cannot be a folder name. Their ``test`` folder is the official unlabeled
-test split and is never used.
+slash cannot be a folder name. Their ``test`` folder is the official test split
+without labels, so it is never used.
 
 Three input layouts are accepted (auto-detected under ``raw_dir``):
 
 ``official``
-    ``images/100k/{train,val}/**/*.jpg`` plus
-    ``labels/bdd100k_labels_images_{train,val}.json`` (``labels_dir`` may point
-    elsewhere, since the images and labels ship as separate archives).
+    ``images/100k/{train,val,test}/**/*.jpg`` (or, as in the Hugging Face repo
+    ``dronefreak/BDD100K``, ``data/images_100k/100k/...``) plus either
+    ``labels/bdd100k_labels_images_{train,val,test}.json`` or one JSON per image
+    under ``labels/100k/{train,val,test}/**/*.json`` (``data/labels`` on the Hub;
+    ``labels_dir`` may point
+    elsewhere, since the images and labels ship as separate archives). The
+    ``test`` labels are optional: the 2018 release withheld them.
 ``folders``
     ``{train,val}/<class>/*.jpg``, the Kaggle layout. A loose ``test/`` folder
-    is ignored.
+    is ignored (it has no labels).
 ``hf``
     The Hugging Face datasets ``dronefreak/BDD100K-{Weather,Period,Scenario}-
-    Classification``: ``data/images/{train,valid}/shard_*/`` with the jpgs and a
-    ``metadata.jsonl`` per shard (``{"file_name": ..., "label": <class>}``).
-    ``raw_dir`` is the downloaded repo root; ``valid`` is the official val set.
+    Classification``: ``data/images/{train,valid,test}/shard_*/`` with the jpgs
+    and a ``metadata.jsonl`` per shard (``{"file_name": ..., "label": <class>}``).
+    ``raw_dir`` is the downloaded repo root; ``test`` may be absent.
 
-Whichever is used, the output and the splits are the same: official ``val``
-becomes ``test``, and a seeded 15% of ``train`` becomes ``valid``. The holdout
-is chosen over the sorted image names of *all* train images (before any class
-filtering), so it is identical across all layouts, across the three tasks, and
-for the detection task, and it does not change with ``include_unknown``.
+Whichever is used, the splits are the official ones, with nothing carved out:
+``train`` -> ``train``, official ``val`` -> ``valid``, and ``test`` -> ``test``
+when it has labels. They are the same across the three tasks and the detection
+task, and do not change with ``include_unknown``.
 
 ``unknown`` images are kept as a class by default (the Kaggle definition) and
 dropped with ``include_unknown=False``.
@@ -45,11 +48,8 @@ from pathlib import Path
 from typing import Any, Literal
 
 from bdd100k_toolkit.utils.io import ImageOptions, materialize_images
+from bdd100k_toolkit.utils.labels import label_source, official_dirs, read_entries
 from bdd100k_toolkit.utils.checks import format_counts, require_nonempty
-from bdd100k_toolkit.utils.split import seeded_holdout
-
-VAL_FRACTION = 0.15
-SPLIT_SEED = 42
 
 UNKNOWN_CLASS = "unknown"
 RAW_UNDEFINED = "undefined"
@@ -74,16 +74,19 @@ def index_images(root: Path) -> dict[str, Path]:
 
 
 def load_entries(label_dir: Path, split: str) -> list[dict[str, Any]]:
-    """Load one native BDD100K label JSON (``train`` or ``val``)."""
-    path = label_dir / f"bdd100k_labels_images_{split}.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    """Load the labels of ``split`` (train, val or test), from either layout."""
+    source = label_source(label_dir, split)
+    if source is None:
+        raise FileNotFoundError(
+            f"No {split} labels in {label_dir}: expected bdd100k_labels_images_"
+            f"{split}.json or a 100k/{split}/ folder of per-image JSON files."
+        )
+    return read_entries(source)
 
 
 def detect_layout(raw_dir: Path, labels_dir: Path | None = None) -> Layout:
     """Return which input layout ``raw_dir`` has (``official`` wins if both)."""
-    official = (raw_dir / "images" / "100k").is_dir() and (
-        labels_dir or raw_dir / "labels"
-    ).is_dir()
+    official = official_dirs(raw_dir, labels_dir) is not None
     folders = (raw_dir / "train").is_dir() and (raw_dir / "val").is_dir()
     hf = (raw_dir / "data" / "images" / "train").is_dir()
     if official:
@@ -135,41 +138,28 @@ def prepare_attribute_classification(  # noqa: PLR0913
     layout = detect_layout(raw_dir, labels_dir)
     print(f"Input layout: {layout}")
     if layout == "official":
-        train, val = _samples_from_official(
-            raw_dir,
-            labels_dir or raw_dir / "labels",
+        image_dir, label_dir = official_dirs(raw_dir, labels_dir)  # type: ignore[misc]
+        by_split = _samples_from_official(
+            image_dir,
+            label_dir,
             attribute,
             classes,
             aliases or {},
             include_unknown,
         )
     elif layout == "hf":
-        train, val = _samples_from_hf(raw_dir, classes, include_unknown)
+        by_split = _samples_from_hf(raw_dir, classes, include_unknown)
     else:
-        train, val = _samples_from_folders(raw_dir, classes, include_unknown)
+        by_split = _samples_from_folders(raw_dir, classes, include_unknown)
     options = image_options or ImageOptions()
     _warn_if_not_empty(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    _, valid_names = seeded_holdout(
-        sorted(s.name for s in train), VAL_FRACTION, SPLIT_SEED
-    )
-    valid_set = set(valid_names)
     split_counts = {
-        "train": _write_split(
-            [s for s in train if s.name not in valid_set],
-            output_dir / "train",
-            allowed,
-            options,
-        ),
-        "valid": _write_split(
-            [s for s in train if s.name in valid_set],
-            output_dir / "valid",
-            allowed,
-            options,
-            required=False,
-        ),
-        "test": _write_split(val, output_dir / "test", allowed, options),
+        split: _write_split(
+            samples, output_dir / split, allowed, options, required=split != "test"
+        )
+        for split, samples in by_split.items()
     }
     _write_info(
         output_dir,
@@ -218,36 +208,41 @@ def _label_for(
 
 
 def _samples_from_official(  # noqa: PLR0913, PLR0917
-    raw_dir: Path,
+    image_dir: Path,
     label_dir: Path,
     attribute: str,
     classes: list[str],
     aliases: dict[str, str],
     include_unknown: bool,
-) -> tuple[list[_Sample], list[_Sample]]:
-    """Read train and val samples from the raw images + official label JSON."""
-    image_dir = raw_dir / "images" / "100k"
-    result: list[list[_Sample]] = []
-    for split in ("train", "val"):
-        images = index_images(image_dir / split)
+) -> dict[str, list[_Sample]]:
+    """Read train, valid (official val) and optional test from images + label JSON."""
+    result: dict[str, list[_Sample]] = {}
+    for label_split, split in (("train", "train"), ("val", "valid"), ("test", "test")):
+        if label_split == "test" and not (
+            label_source(label_dir, "test") is not None
+            and (image_dir / "test").is_dir()
+        ):
+            print("No test labels or test images found: test split skipped")
+            continue
+        images = index_images(image_dir / label_split)
         samples: list[_Sample] = []
-        for entry in load_entries(label_dir, split):
+        for entry in load_entries(label_dir, label_split):
             src = images.get(entry["name"])
             raw = entry.get("attributes", {}).get(attribute)
             label, reason = _label_for(raw, classes, aliases, include_unknown)
             if src is None:
                 label, reason = None, "label without image file"
             samples.append(_Sample(entry["name"], src, label, reason))
-        result.append(samples)
-    return result[0], result[1]
+        result[split] = samples
+    return result
 
 
 def _samples_from_folders(
     raw_dir: Path, classes: list[str], include_unknown: bool
-) -> tuple[list[_Sample], list[_Sample]]:
-    """Read train and val samples from ``{train,val}/<class>/*.jpg`` folders."""
+) -> dict[str, list[_Sample]]:
+    """Read train and valid (the ``val`` folder) from ``{train,val}/<class>/*.jpg``."""
     known = {*classes, UNKNOWN_CLASS}
-    result: list[list[_Sample]] = []
+    result: dict[str, list[_Sample]] = {}
     for split in ("train", "val"):
         class_dirs = sorted(p for p in (raw_dir / split).iterdir() if p.is_dir())
         found = {p.name for p in class_dirs}
@@ -275,20 +270,22 @@ def _samples_from_folders(
                         "unknown excluded" if excluded else None,
                     )
                 )
-        result.append(samples)
+        result["valid" if split == "val" else split] = samples
     test_dir = raw_dir / "test"
     if test_dir.is_dir():
         print(f"Ignoring unlabeled test images in {test_dir}")
-    return result[0], result[1]
+    return result
 
 
 def _samples_from_hf(
     raw_dir: Path, classes: list[str], include_unknown: bool
-) -> tuple[list[_Sample], list[_Sample]]:
-    """Read train and val samples from the Hugging Face shards + ``metadata.jsonl``."""
+) -> dict[str, list[_Sample]]:
+    """Read train, valid and optional test from the Hub shards + ``metadata.jsonl``."""
     known = {*classes, UNKNOWN_CLASS}
-    result: list[list[_Sample]] = []
-    for split in ("train", "valid"):
+    result: dict[str, list[_Sample]] = {}
+    for split in ("train", "valid", "test"):
+        if split == "test" and not (raw_dir / "data" / "images" / "test").is_dir():
+            continue
         samples: list[_Sample] = []
         shards = sorted((raw_dir / "data" / "images" / split).glob("shard_*"))
         for shard in shards:
@@ -310,8 +307,8 @@ def _samples_from_hf(
                     samples.append(
                         _Sample(name, path, None, f"unexpected value {raw!r}")
                     )
-        result.append(samples)
-    return result[0], result[1]
+        result[split] = samples
+    return result
 
 
 def _write_split(

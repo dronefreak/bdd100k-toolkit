@@ -46,7 +46,7 @@ def test_detection_raises_when_no_images_match(
 ) -> None:
     shutil.rmtree(raw_bdd100k_detection_dir / "images" / "100k" / "val")
     (raw_bdd100k_detection_dir / "images" / "100k" / "val").mkdir()
-    with pytest.raises(EmptySplitError, match="test"):
+    with pytest.raises(EmptySplitError, match="valid"):
         get_detection("bdd100k-detection").prepare_coco(
             raw_bdd100k_detection_dir, tmp_path / "out"
         )
@@ -86,9 +86,9 @@ def test_segmentation_accepts_legacy_train_id_mask_names(
     get_segmentation("bdd100k-semantic-seg").prepare_segmentation(
         raw_bdd100k_semantic_seg_dir, out
     )
-    assert len(list((out / "test" / "masks").glob("*.png"))) == 2
+    assert len(list((out / "valid" / "masks").glob("*.png"))) == 2
     # Canonical output always uses the plain stem.
-    assert (out / "test" / "masks" / "v0.png").is_file()
+    assert (out / "valid" / "masks" / "v0.png").is_file()
 
 
 def _write_det20(raw_dir: Path, names: dict[str, str]) -> None:
@@ -160,8 +160,8 @@ def test_detection_reads_det20_with_either_naming_scheme(
     used = {category_names[a["category_id"]] for a in train["annotations"]}
     assert used == {"person", "bike"}  # "other vehicle" ignored, "van" unknown
 
-    test = json.loads((out / "test" / "_annotations.coco.json").read_text())
-    assert {category_names[a["category_id"]] for a in test["annotations"]} == {"motor"}
+    valid = json.loads((out / "valid" / "_annotations.coco.json").read_text())
+    assert {category_names[a["category_id"]] for a in valid["annotations"]} == {"motor"}
 
 
 def test_detection_keeps_crowd_and_attributes(
@@ -209,7 +209,7 @@ def test_detection_reads_image_size_from_file(
     out = tmp_path / "out"
     with pytest.warns(UserWarning):  # fake-bytes images fall back, and are reported
         get_detection("bdd100k-detection").prepare_coco(raw_bdd100k_detection_dir, out)
-    test = json.loads((out / "test" / "_annotations.coco.json").read_text())
+    test = json.loads((out / "valid" / "_annotations.coco.json").read_text())
     sizes = {i["file_name"]: (i["width"], i["height"]) for i in test["images"]}
     assert sizes["v0.jpg"] == (64, 32)
     assert sizes["v1.jpg"] == (1280, 720)
@@ -222,6 +222,6 @@ def test_detection_image_ids_are_contiguous(
     out = tmp_path / "out"
     with pytest.warns(UserWarning):
         get_detection("bdd100k-detection").prepare_coco(raw_bdd100k_detection_dir, out)
-    test = json.loads((out / "test" / "_annotations.coco.json").read_text())
+    test = json.loads((out / "valid" / "_annotations.coco.json").read_text())
     assert [i["id"] for i in test["images"]] == [0]
     assert np.all([a["image_id"] == 0 for a in test["annotations"]])
