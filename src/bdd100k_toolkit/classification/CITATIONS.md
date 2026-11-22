@@ -6,13 +6,16 @@ with the `timm` backend, and the BDD100K dataset paper (see the main README).
 
 | Model | Cite |
 |---|---|
-| YOLOv8n-cls | Ultralytics YOLOv8 (software) |
-| YOLO11n-cls | Ultralytics YOLO11 (software) |
-| YOLO26n-cls | YOLO26 paper |
-| MobileNetV4-Conv-Small | MobileNetV4 paper, plus timm |
-| EfficientViT-B0 | EfficientViT paper, plus timm |
+| YOLOv8n-cls, YOLOv8s-cls | Ultralytics YOLOv8 (software) |
+| YOLO11n-cls, YOLO11s-cls | Ultralytics YOLO11 (software) |
+| YOLO26n-cls, YOLO26s-cls | YOLO26 paper |
+| MobileNetV4-Conv-Small, MobileNetV4-Conv-Large | MobileNetV4 paper, plus timm |
+| EfficientViT-B0, B1, B2, B3, L1 | EfficientViT paper, plus timm |
+| EfficientFormerV2-S2, EfficientFormerV2-L | EfficientFormerV2 paper, plus timm |
 | ConvNeXt-Atto, ConvNeXt-Tiny | ConvNeXt paper, plus timm |
 | ResNet-18 | ResNet paper, plus timm |
+| TinyViT-21M | TinyViT paper, plus timm |
+| RepViT-M1.5, RepViT-M2.3 | RepViT paper, plus timm |
 
 ## YOLOv8
 
@@ -102,6 +105,48 @@ with the `timm` backend, and the BDD100K dataset paper (see the main README).
   booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
   year = {2016},
   url = {https://arxiv.org/abs/1512.03385}
+}
+```
+
+## EfficientFormerV2
+
+```bibtex
+@inproceedings{li2023rethinking,
+  title = {Rethinking Vision Transformers for {MobileNet} Size and Speed},
+  author = {Li, Yanyu and Hu, Ju and Wen, Yang and Evangelidis, Georgios and Salahi, Kamyar and Wang, Yanzhi and Tulyakov, Sergey and Ren, Jian},
+  booktitle = {IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year = {2023},
+  eprint = {2212.08059},
+  archivePrefix = {arXiv},
+  url = {https://arxiv.org/abs/2212.08059}
+}
+```
+
+## TinyViT
+
+```bibtex
+@inproceedings{wu2022tinyvit,
+  title = {{TinyViT}: Fast Pretraining Distillation for Small Vision Transformers},
+  author = {Wu, Kan and Zhang, Jinnian and Peng, Houwen and Liu, Mengchen and Xiao, Bin and Fu, Jianlong and Yuan, Lu},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  year = {2022},
+  eprint = {2207.10666},
+  archivePrefix = {arXiv},
+  url = {https://arxiv.org/abs/2207.10666}
+}
+```
+
+## RepViT
+
+```bibtex
+@inproceedings{wang2024repvit,
+  title = {{RepViT}: Revisiting Mobile {CNN} From {ViT} Perspective},
+  author = {Wang, Ao and Chen, Hui and Lin, Zijia and Han, Jungong and Ding, Guiguang},
+  booktitle = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year = {2024},
+  eprint = {2307.09283},
+  archivePrefix = {arXiv},
+  url = {https://arxiv.org/abs/2307.09283}
 }
 ```
 

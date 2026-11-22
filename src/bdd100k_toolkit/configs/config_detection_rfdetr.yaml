@@ -3,7 +3,7 @@
 #   bdd100k-train dataset=bdd100k-detection model.name=rfdetr-nano \
 #       model.resolution=576 dataset.dataset_dir=<canonical_coco_out>
 #
-# Needs: pip install "bdd100k-toolkit[rfdetr]". The data is the canonical COCO
+# Needs: pip install -e ".[rfdetr]". The data is the canonical COCO
 # layout written by `bdd100k-prepare` ({train,valid,test}/_annotations.coco.json).
 
 defaults:

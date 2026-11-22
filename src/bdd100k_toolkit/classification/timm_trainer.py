@@ -63,7 +63,7 @@ def import_timm() -> Any:
     except ImportError as err:
         raise ImportError(
             "timm is required for the 'timm' backend. "
-            'Install with: pip install "bdd100k-toolkit[timm]"'
+            'Install with: pip install -e ".[timm]"'
         ) from err
     return timm
 

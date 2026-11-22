@@ -12,5 +12,6 @@ No trained models yet.
 ## Download Data
 
 Needs `MOT 2020 Images` plus `MOT 2020 Labels` (MOTS: `MOTS 2020 Images` and `MOTS 2020 Labels`).
-The official BDD100K website is down and there is no Hugging Face copy yet, so there is currently no
-reliable download source for these.
+The official BDD100K website is down, the Berkeley file server that still has the other zips has no
+tracking labels, and there is no Hugging Face copy yet, so there is currently no reliable download source
+for these.

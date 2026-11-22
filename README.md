@@ -5,7 +5,7 @@
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-green)](LICENSE)
 [![Maintained](https://img.shields.io/badge/maintained-yes-brightgreen)](https://github.com/dronefreak/bdd100k-toolkit/commits)
-[![Backends: Ultralytics, timm](https://img.shields.io/badge/backends-Ultralytics%20%7C%20timm-informational)](src/bdd100k_toolkit/classification)
+[![Backends: Ultralytics, timm, RF-DETR, SMP](https://img.shields.io/badge/backends-Ultralytics%20%7C%20timm%20%7C%20RF--DETR%20%7C%20SMP-informational)](src/bdd100k_toolkit)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230)](https://github.com/astral-sh/ruff)
 
 <p align="center">
@@ -18,16 +18,44 @@ This repository currently supports the tasks listed below. For more information 
 
 | Task | Covers | Model zoo | Trainable architectures |
 |---|---|---|---|
-| [**Image Classification**](src/bdd100k_toolkit/classification) | weather, time of day and scenario (unofficial tasks) | 37 models | 1300+ in `timm`, 12+ in `ultralytics` |
+| [**Image Classification**](src/bdd100k_toolkit/classification) | weather, time of day and scenario (unofficial tasks) | 55 models | 1300+ in `timm`, 12+ in `ultralytics` |
 | [**Object Detection**](src/bdd100k_toolkit/detection) | 10 classes | 10 models | 30+ in `ultralytics`, 5+ in `rfdetr` |
 | [**Semantic Segmentation**](src/bdd100k_toolkit/segmentation) | 19 classes | in progress | |
 | [**Object Tracking**](src/bdd100k_toolkit/tracking) | | planned | |
 
+## Installation
+
+The toolkit is not on PyPI yet, so install it from source (Python 3.10+):
+
+```bash
+git clone https://github.com/dronefreak/bdd100k-toolkit.git
+cd bdd100k-toolkit
+pip install -e ".[timm]"
+```
+
+Optional extras: `rfdetr` (RF-DETR detectors), `segmentation` (SMP training), `transformers` (pretrained
+SegFormer and Mask2Former) and `dev` (tests and linters), e.g. `pip install -e ".[timm,rfdetr]"`.
+
+## Quickstart
+
+Download a detector and a weather classifier from the model zoo and run them on a dashcam frame (add
+`--video clip.mp4` for a video, `--device cpu` without a GPU):
+
+```bash
+hf download dronefreak/bdd100k-yolo26s best.pt --local-dir weights/yolo26s
+hf download dronefreak/bdd100k-weather-tiny_vit_21m_224 best.pt --local-dir weights/weather
+python demo/detect.py --image frame.jpg --model weights/yolo26s/best.pt
+python demo/classify.py --image frame.jpg --model weather=weights/weather/best.pt
+```
+
+To prepare the data, train and evaluate, every task uses the same three commands, `bdd100k-prepare`,
+`bdd100k-train` and `bdd100k-evaluate`; the task pages above have the full recipes.
+
 ## Datasets
 
-The official BDD100K website (bdd100k.com, bdd-data.berkeley.edu) is down and has been unreachable, so the datasets below are unofficial redistributions on Hugging Face, which the BDD100K license allows as long as the copyright notice is carried forward.
+The official BDD100K website (bdd100k.com, bdd-data.berkeley.edu) is down. The original zips are still served, under the same license, by a Berkeley file server at <http://128.32.162.150/bdd100k/>, and the datasets below are unofficial redistributions on Hugging Face, which the BDD100K license allows as long as the copyright notice is carried forward.
 
-To use this toolkit, download the datasets from Hugging Face (all with the original 2018 labels):
+To use this toolkit, download the datasets from Hugging Face (all with the original Berkeley labels):
 
 | Task | Dataset |
 |---|---|

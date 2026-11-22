@@ -10,7 +10,7 @@ defaults:
 
 model:
   # ultralytics: yolo11n-cls, yolov8s-cls, ...   timm: convnext_tiny, resnet50, ...
-  # (the timm backend needs: pip install "bdd100k-toolkit[timm]")
+  # (the timm backend needs: pip install -e ".[timm]")
   backend: ultralytics
   name: yolo11n-cls
 

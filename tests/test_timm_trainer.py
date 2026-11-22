@@ -166,7 +166,7 @@ def test_factory_builds_both_backends_and_rejects_unknown() -> None:
 
 def test_missing_timm_gives_install_hint(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "timm", None)  # makes `import timm` fail
-    with pytest.raises(ImportError, match=r"bdd100k-toolkit\[timm\]"):
+    with pytest.raises(ImportError, match=r"pip install -e \"\.\[timm\]\""):
         TimmClassificationTrainer("resnet18")
 
 

@@ -38,7 +38,7 @@ def load_model_class(model_name: str) -> type[Any]:
         import rfdetr
     except ImportError as err:
         raise ImportError(
-            'RF-DETR is not installed: pip install "bdd100k-toolkit[rfdetr]"'
+            'RF-DETR is not installed: pip install -e ".[rfdetr]"'
         ) from err
     return getattr(rfdetr, RFDETR_CLASSES[canonical])  # type: ignore[no-any-return]
 

@@ -1,14 +1,17 @@
 # Object Detection
 
 Detect 10 classes (person, rider, car, truck, bus, train, motor, bike, traffic light,
-traffic sign) in the 100K-image BDD100K release, all 1280x720: 59,384 train and 10,479 valid
-images (a seeded 15% split of the official train set) and the 10,000 official val images, which
-are what every score here is measured on. BDD100K has no labelled test split, so the prepared
-folders store the official val images under the name `test`. Boxes come from the official labels
-(the 2018 JSON, or the 2020 `det_20` files if you have them); lanes and drivable-area
-polygons are ignored. The models below were trained on the 2018 labels, the same ones
-redistributed in the YOLO-format dataset
-🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) on Hugging Face.
+traffic sign) in the 100K-image BDD100K release, all 1280x720, on the official splits: 70,000 `train`,
+10,000 `valid` (the official val) and 20,000 `test` images. Boxes come from the official labels
+(`bdd100k_labels_images_{train,val,test}.json`, or the 2020 `det_20` files; the older 2018 download
+has no test file and then only `train` and `valid` are written); lanes and drivable-area polygons
+are ignored. The dataset is redistributed, as received, as
+🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K) on Hugging Face, and
+`bdd100k-prepare` converts it.
+
+The scores in the Model Zoo predate this layout: those models were trained on 59,384 images (a seeded
+85% of the official train set), selected on the other 10,479, and scored on the official val images,
+which the older layout stored in a folder called `test` (they are the `valid` folder now).
 
 ## Model Zoo
 
@@ -43,29 +46,42 @@ Weakest classes: `train` (15 val boxes), `traffic light` and `traffic sign` (sma
 
 ## Download Data
 
-The official BDD100K website is down, so this is an unofficial redistribution on Hugging Face: the
-YOLO-format dataset with the original 2018 labels (59,384 train, 10,479 valid and 10,000 val images, the last stored in a `test` folder),
-🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K).
+The official BDD100K website is down (the original zips are still on a [Berkeley file server](http://128.32.162.150/bdd100k/)), and this is an unofficial redistribution on Hugging Face: the
+100K images and per-image label JSON files exactly as the Berkeley packages ship them, on the
+official splits (70,000 train, 10,000 val and 20,000 test images),
+🤗 [dronefreak/BDD100K](https://huggingface.co/datasets/dronefreak/BDD100K). Each folder holds at
+most 8,000 files, so the splits are sharded:
 
-```bash
-hf download dronefreak/BDD100K --repo-type dataset --local-dir /path/to/bdd100k
-sed -i "s#^path:.*#path: /path/to/bdd100k/data#" /path/to/bdd100k/data/data.yaml
+```text
+data/images_100k/100k/{train,val,test}/shard_NNN/<id>.jpg
+data/labels/100k/{train,val,test}/shard_NNN/<id>.json
 ```
 
-Its `data.yaml` has `path: .`, which Ultralytics resolves from the current directory, so the `sed`
-points it at the folder. A copy of the official download (images plus `det_20` or 2018 labels) works
-too, see the last Usage section.
+```bash
+hf download dronefreak/BDD100K --repo-type dataset --local-dir /path/to/bdd100k_raw
+```
+
+Convert it to the COCO and YOLO folders the training commands below read (the same command also
+accepts the unpacked Berkeley zips, `images/100k` + `labels`, and the single-file 2018 or `det_20`
+label JSON):
+
+```bash
+bdd100k-prepare --dataset bdd100k-detection --raw-dir /path/to/bdd100k_raw --output-dir /path/to/coco
+bdd100k-coco-to-yolo --input-dir /path/to/coco --output-dir /path/to/yolo
+```
+
+The YOLO folder has the `data.yaml` used below (`/path/to/yolo/data.yaml`).
 
 ## Usage
 
 ### Train
 
-This is the recipe behind every YOLO model in the table (YOLO26s shown), written out in full so it does not depend on config defaults. It trains on `train`, validates on `valid` after every epoch, and evaluates the best checkpoint on the official val set (the `test` folder) at the end. The COCO-pretrained weights download
+This is the recipe behind every YOLO model in the table (YOLO26s shown), written out in full so it does not depend on config defaults. It trains on `train`, selects the best checkpoint on `valid` after every epoch, and evaluates it on `test` at the end. The COCO-pretrained weights download
 automatically.
 
 ```bash
 bdd100k-train dataset=bdd100k-detection model.name=yolo26s \
-    dataset.dataset_yaml=/path/to/bdd100k/data/data.yaml \
+    dataset.dataset_yaml=/path/to/yolo/data.yaml \
     training.output_dir=experiments/bdd100k-detection/yolo26s \
     training.epochs=50 training.imgsz=960 training.batch_size=-1 \
     training.optimizer=SGD training.lr=0.01 training.cos_lr=true training.use_amp=true \
@@ -79,19 +95,32 @@ metrics are in `evaluation/metrics.json`. Any other model in the table works by 
 `model.name` and `training.output_dir` (`yolov8n`, `yolov8s`, `yolov9t`, `yolov10n`, `yolov10s`,
 `yolo11n`, `yolo11s`, `yolo26n`, `yolo26s`)
 
+`scripts/train_detection.sh` (nano tier) and `scripts/train_detection_small.sh` (small tier) run whole
+suites with these batch sizes, the largest measured to fit a 12 GB GPU with headroom (they came from
+DetectionBench; `BATCH=N` overrides):
+
+| Tier | YOLO batch (960 px) | RF-DETR resolution | RF-DETR batch x accumulation |
+|---|---|---|---|
+| nano (`n`, `t`) | 24 | 576 | 8 x 2 = 16 |
+| small (`s`) | 12 | 640 | 6 x 3 = 18 |
+| medium (`m`) | 6 | 704 | 4 x 4 = 16 |
+
+The RF-DETR numbers are passed as `training.batch_size=8 training.grad_accum_steps=2` and so on (the
+config default is `auto`).
+
 Other Ultralytics training arguments go through `+training.extra.<key>=<value>`
 (for example `+training.extra.fraction=0.1` for a quick check on 10% of the data).
 
 ### Train RF-DETR
 
-RF-DETR needs the extra (`pip install "bdd100k-toolkit[rfdetr]"`) and reads the COCO folder written by
+RF-DETR needs the extra (`pip install -e ".[rfdetr]"`) and reads the COCO folder written by
 `bdd100k-prepare` instead of the YOLO `data.yaml`. The same command dispatches on `model.name`
 (`rfdetr-nano`, `rfdetr-small`, `rfdetr-medium`). RF-DETR squares the whole frame, so the resolution
 matters: the nano baseline used 576 (small 640, medium 704), a multiple of 64.
 
 ```bash
 bdd100k-train dataset=bdd100k-detection model.name=rfdetr-nano model.resolution=576 \
-    dataset.dataset_dir=/path/to/bdd100k/coco_dataset \
+    dataset.dataset_dir=/path/to/coco \
     training.output_dir=experiments/bdd100k-detection/rfdetr-nano
 ```
 
@@ -102,12 +131,12 @@ For a quick GPU check add `training.epochs=2 training.batch_size=4` on a small C
 
 ### Evaluate
 
-`--split test` selects the folder holding the official val images.
+`--split test` (the default) scores the official test images; `--split valid` scores the official val images.
 
 ```bash
 bdd100k-evaluate --dataset bdd100k-detection --model yolo26s \
     --checkpoint experiments/bdd100k-detection/yolo26s/yolo26s/weights/best.pt \
-    --dataset-yaml /path/to/bdd100k/data/data.yaml --split test \
+    --dataset-yaml /path/to/yolo/data.yaml --split test \
     --output-dir experiments/bdd100k-detection/yolo26s/evaluation
 ```
 
@@ -117,7 +146,7 @@ For RF-DETR, pass the COCO folder instead of `--dataset-yaml`
 ```bash
 bdd100k-evaluate --dataset bdd100k-detection --model rfdetr-nano \
     --checkpoint experiments/bdd100k-detection/rfdetr-nano/checkpoint_best_total.pth \
-    --dataset-dir /path/to/bdd100k/coco_dataset --split test
+    --dataset-dir /path/to/coco --split test
 ```
 
 ### Demo
@@ -132,13 +161,3 @@ python demo/detect.py --video /path/to/clip.mp4 \
 Images, folders of images, videos and folders of videos are all accepted; outputs go to
 `demo/outputs/`. `--model` also takes an RF-DETR `checkpoint_best_total.pth` (with its
 `training_config.json` beside it, and the `rfdetr` extra installed).
-
-### Official download instead of the Hugging Face copy
-
-Convert it first, then train and evaluate exactly as above with `dataset.dataset_yaml` and
-`--dataset-yaml` pointing at `/path/to/yolo/data.yaml`:
-
-```bash
-bdd100k-prepare --dataset bdd100k-detection --raw-dir /path/to/bdd100k_raw --output-dir /path/to/coco
-bdd100k-coco-to-yolo --input-dir /path/to/coco --output-dir /path/to/yolo
-```

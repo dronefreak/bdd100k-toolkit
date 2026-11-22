@@ -38,7 +38,7 @@ Mask2Former Swin-B (IN21k) is not listed: its checkpoint does not load correctly
 
 ## Download Data
 
-The official BDD100K website is down, so there is an unofficial redistribution on Hugging Face:
+The official BDD100K website is down (the original zips are still on a [Berkeley file server](http://128.32.162.150/bdd100k/)), and there is an unofficial redistribution on Hugging Face:
 
 | Task | Dataset |
 |---|---|
@@ -48,7 +48,9 @@ The official BDD100K website is down, so there is an unofficial redistribution o
 hf download dronefreak/BDD100K-Semantic-Segmentation --repo-type dataset --local-dir /path/to/bdd100k_10k
 ```
 
-The adapter is not yet checked against this copy's layout. Instance and panoptic segmentation need the
+`bdd100k-prepare` reads this copy as downloaded, and also the unpacked Berkeley zips (see
+[data-notes.md](../../../docs/data-notes.md#sources-and-layouts)). The official test split has no public
+masks, so the prepared data has `train` (7,000) and `valid` (the official val, 1,000). Instance and panoptic segmentation need the
 `Instance Segmentation` and `Panoptic Segmentation` labels, which have no Hugging Face copy yet.
 
 ## Usage
@@ -61,7 +63,7 @@ bdd100k-train dataset=bdd100k-semantic-seg dataset.data_dir=/path/to/out   # Une
 ### Evaluate a pretrained Hugging Face model
 
 ```bash
-pip install "bdd100k-toolkit[transformers]"
+pip install -e ".[transformers]"
 bdd100k-evaluate --dataset bdd100k-semantic-seg \
     --hf-model nvidia/segformer-b5-finetuned-cityscapes-1024-1024 \
     --images-dir /path/to/images/val --masks-dir /path/to/labels/val
