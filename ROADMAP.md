@@ -1,6 +1,6 @@
 # Roadmap
 
-One line per task. `[x]` done, `[ ]` open. Details: `VISION.md` (architecture).
+One line per task. `[x]` done, `[ ]` open. Design: [docs/architecture.md](docs/architecture.md).
 
 ```text
 P0 foundation -> P1 real data -> P2 shared core -> P3 official evaluation
@@ -23,10 +23,12 @@ P0 foundation -> P1 real data -> P2 shared core -> P3 official evaluation
 - [x] Classification: prepare, train and evaluate on real data (official and Kaggle layouts)
 - [x] Classification: 3 tasks, 2 backends, 7+ models each, 3 tuning rounds, demo for image and video
 - [ ] CI green on `main`, branch protection
-- [x] Detection: real prepare (59,384 / 10,479 / 10,000 images) and a real smoke training run
+- [x] Detection: real prepare (70,000 / 10,000 / 20,000 images) and a real smoke training run
+- [x] Official splits for every task (train / val as `valid` / test), nothing carved out of train
 - [x] Detection baselines: 9 YOLO models from DetectionBench re-evaluated here (match to 0.00004 mAP)
 - [ ] Detection: higher resolution, longer schedule and larger models (leads in the baselines doc)
-- [ ] Semantic segmentation: real prepare run and real smoke training
+- [x] Semantic segmentation: real prepare (7,000 / 1,000; Berkeley zip, Hub and older layouts)
+- [ ] Semantic segmentation: real smoke training
 - [ ] Classification results write-up and Model Zoo refreshed with the final picks
 
 ## P2 Shared core
@@ -90,9 +92,8 @@ Each task: adapter, canonical format, trainer, evaluator, `validate/stats/visual
 - Nothing is dropped without a count
 - Every metric states which official semantics it follows
 - A task is done only after a real-data check; fixtures are for unit tests
-- No `git add` or `git commit` unless asked
 
-## Open decisions (owner: you)
+## Open decisions
 
 - Detection evaluation may depend on `pycocotools`? Default: yes
 - Pose and lane marking: in scope? Default: pose in (later), lane optional
